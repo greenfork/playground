@@ -1,0 +1,25 @@
+{
+	"chttpd": {
+		"enable_cors": true,
+		"bind_address": "0.0.0.0"
+	},
+	"cors": {
+		"origins": "http://client-notes.local",
+		"credentials": true,
+		"methods": ["GET", "PUT", "POST", "HEAD", "DELETE"],
+		"headers": ["accept", "authorization", "content-type", "origin", "referer", "x-csrf-token"]
+	},
+	"couch_peruser": {
+		"enable": true,
+		"delete_dbs": false
+	},
+	"chttpd_auth": {
+		"timeout": 86400
+	},
+	"admins": {
+		"test": "-pbkdf2:sha256-aa1f6d0df03491b311bbed5c5c39efc9569a3204ccae832d0de56c61c969fd39,562a5e4e70031dd1bfebd1aac60233ea,600000"
+	},
+	"couchdb": {
+		"js_engine": "quickjs"
+	}
+}

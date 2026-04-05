@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Server-Sent Events</title>
+	</head>
+	
+	<body>
+		<h1>SSE Messages</h1>
+		<ul id="messages"></ul>
+		<script type="text/javascript">
+			const history = document.getElementById('messages');
+			const eventSource = new EventSource("events");
+			
+			eventSource.onmessage = (event) => {
+				const container = document.createElement("li");
+				container.innerText = event.data;
+				
+				messages.appendChild(container);
+				messages.scrollTop = messages.scrollHeight;
+			};
+		</script>
+	</body>
+</html>

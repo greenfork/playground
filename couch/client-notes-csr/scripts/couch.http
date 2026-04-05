@@ -1,0 +1,22 @@
+@baseUrl = http://alice:alice@localhost:5984
+@db = client-notes
+
+### Create DB
+PUT {{baseUrl}}/{{db}}
+
+### Get all docs
+GET {{baseUrl}}/{{db}}/_all_docs?include_docs=true
+
+### Create a client
+POST {{baseUrl}}/{{db}}
+Content-Type: application/json
+
+{
+  "_id": "client_123",
+  "type": "client",
+  "name": "Anna",
+  "biography": "Test client"
+}
+
+### Query by view
+GET {{baseUrl}}/{{db}}/_design/clients/_view/by_name?key="Anna"

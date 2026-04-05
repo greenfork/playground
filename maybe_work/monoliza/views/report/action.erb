@@ -1,0 +1,16 @@
+<%# locals: (action:, program_id: nil) %>
+<%
+path = program_id ? "/programs/#{program_id}/#{action}" : "/programs/#{action}"
+action_name =
+  case action
+  when :start then "Start"
+  when :stop then "Stop"
+  when :restart then "Restart"
+  when :start_all then "Start all"
+  when :stop_all then "Stop all"
+  end
+%>
+
+<form action="<%= path %>" method="POST">
+  <input type="submit" value="<%= action_name %>">
+</form>

@@ -1,0 +1,12 @@
+[Container]
+Image=couchdb:3.5.1
+
+Environment=COUCHDB_USER=admin
+Environment=COUCHDB_PASSWORD=admin
+
+Volume=couchdb-client-notes.volume:/opt/couchdb/data
+Volume=/home/king/playground/couch/client-notes/configs/couchdb:/opt/couchdb/etc/local.d
+
+PublishPort=127.0.0.1:5984:5984
+
+RemapUsers=keep-id

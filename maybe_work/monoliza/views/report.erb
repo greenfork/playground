@@ -1,0 +1,36 @@
+<article id="report">
+  <h1>REPORTO</h1>
+
+  <div class="actions mb3">
+    <% @report.allowed_actions.each do |action| %>
+      <%== part "report/action", action: action %>
+    <% end %>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>State</th><th>Actions</th>
+      </tr>
+    </thead>
+      <% @report.items.each do |item| %>
+        <tr>
+          <td><%= item.id %></td>
+          <td><%= item.state %></td>
+          <td>
+            <div class="actions">
+              <% item.allowed_actions.each do |action| %>
+                <%== part "report/action", action: action, program_id: item.id %>
+              <% end %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    <tbody>
+    </tbody>
+  </table>
+
+  <section>
+    <pre id="main-logs" data-sse="logs"></pre>
+  </section>
+</article>

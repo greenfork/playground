@@ -1,0 +1,7 @@
+# ticker:  ruby ./ticker $PORT
+myerror:   ruby ./error
+# utf8:    ruby ./utf8
+# single_call:    ruby ./single_call
+spawner: ./spawner
+# oneshot: ONESHOT=uno ./oneshot
+# non-exist: non-exist

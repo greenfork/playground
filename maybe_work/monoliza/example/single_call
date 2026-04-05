@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+$stdout.sync = true
+
+puts "STARTED single_call"
+
+while true
+  puts "first\nsecond\nthird"
+  sleep 1
+end

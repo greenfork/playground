@@ -1,0 +1,14 @@
+AllCops:
+  DisabledByDefault: true
+  TargetRubyVersion: "4.0"
+  Exclude:
+    - 'example/**'
+    - 'Gemfile'
+    - 'bin/**'
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes

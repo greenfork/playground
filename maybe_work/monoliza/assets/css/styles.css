@@ -1,0 +1,63 @@
+@layer main, component, utility;
+
+:root {
+  --s1: .25rem;
+  --s2: .5rem;
+  --s3: 1rem;
+  --s4: 2rem;
+  --s5: 4rem;
+}
+
+@layer main {
+  #main-logs {
+    height: 30rem;
+    overflow: auto;
+    width: 100%;
+    border: 1px solid black;
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--s2);
+  }
+}
+
+@layer component {
+  input[type=submit], input[type=button], button {
+    padding: var(--s2) var(--s3);
+    border-radius: 0;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+  }
+
+  table {
+    border-collapse: collapse;
+
+    td, th {
+      padding: var(--s2);
+      border-bottom: 1px solid black;
+    }
+  }
+}
+
+@layer utility {
+  .ms1 { margin-inline-start: var(--s1); }
+  .ms2 { margin-inline-start: var(--s2); }
+  .ms3 { margin-inline-start: var(--s3); }
+  .ms4 { margin-inline-start: var(--s4); }
+  .me1 { margin-inline-end: var(--s1); }
+  .me2 { margin-inline-end: var(--s2); }
+  .me3 { margin-inline-end: var(--s3); }
+  .me4 { margin-inline-end: var(--s4); }
+  .mt1 { margin-block-start: var(--s1); }
+  .mt2 { margin-block-start: var(--s2); }
+  .mt3 { margin-block-start: var(--s3); }
+  .mt4 { margin-block-start: var(--s4); }
+  .mb1 { margin-block-end: var(--s1); }
+  .mb2 { margin-block-end: var(--s2); }
+  .mb3 { margin-block-end: var(--s3); }
+  .mb4 { margin-block-end: var(--s4); }
+  .ms-auto { margin-inline-start: auto; }
+  .me-auto { margin-inline-end: auto; }
+}

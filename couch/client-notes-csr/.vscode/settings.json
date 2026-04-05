@@ -1,0 +1,12 @@
+{
+	"rest-client.environmentVariables": {
+		"local": {
+			"baseUrl": "http://alice:alice@localhost:5984",
+			"db": "client-notes"
+		},
+		"prod": {
+			"baseUrl": "https://your-couchdb.example.com",
+			"db": "client-notes"
+		}
+	}
+}

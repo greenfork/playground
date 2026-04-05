@@ -1,0 +1,15 @@
+{
+	auto_https off
+	http_port 5900
+	https_port 5901
+}
+
+client-notes.local:5900 {
+	handle /db/* {
+		uri strip_prefix /db
+		reverse_proxy 127.0.0.1:5984
+	}
+	handle {
+		reverse_proxy 127.0.0.1:5173
+	}
+}

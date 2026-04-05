@@ -1,0 +1,3 @@
+#!/usr/bin/sh
+
+falcon serve --bind http://localhost:9293 -n 1
