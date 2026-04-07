@@ -24,7 +24,7 @@ LOGICAL_SCREEN_HEIGHT :: 480*SCREEN_MULTIPLIER
 
 COMPUTER_SCREEN_RECT :: sdl.FRect{72*SCREEN_MULTIPLIER,42*SCREEN_MULTIPLIER,470*SCREEN_MULTIPLIER,303*SCREEN_MULTIPLIER}
 
-TextureType :: enum { ComputerSceneSelectedMonitor, ComputerSceneSelectedBeer, ComputerSceneSelectedPowerButton }
+TextureType :: enum { ComputerSceneSelectedMonitor, ComputerSceneSelectedBeer, ComputerSceneSelectedPowerButton, DialogBubble }
 Textures :: [TextureType]^sdl.Texture
 texture_load :: proc(r: ^sdl.Renderer, path: cstring) -> ^sdl.Texture {
 	surface := sdl.LoadPNG(path)
@@ -42,6 +42,7 @@ textures_init :: proc(r: ^sdl.Renderer, textures: ^Textures) -> bool {
 	textures[.ComputerSceneSelectedMonitor] = texture_load(r, "assets/computer-scene-selected-monitor.png")
 	textures[.ComputerSceneSelectedBeer] = texture_load(r, "assets/computer-scene-selected-beer.png")
 	textures[.ComputerSceneSelectedPowerButton] = texture_load(r, "assets/computer-scene-selected-power-button.png")
+	textures[.DialogBubble] = texture_load(r, "assets/dialog-bubble.png")
 	return true
 }
 
@@ -95,15 +96,6 @@ ComputerScene :: struct {
 	max_columns: int,
 	selected_thing: enum { Monitor, Beer, PowerButton }
 }
-
-SCREEN_TEXT2 :: `A
-B
-C
-D
-
-E
-G
-H`
 
 SCREEN_TEXT :: `# frozen_string_literal: true
 
@@ -216,6 +208,7 @@ computer_scene_draw :: proc(appstate: ^AppState, scene: ComputerScene) {
 
 	// draw_bounding_rect(appstate.renderer)
 	draw_text(appstate, scene)
+	dialog_bubble_draw(appstate, "Добавляем грёбаный аксессор...\nТак, стоп, что это за хрень...\nАаааа, точно! Я же неделю назад сделал эту фичу, чтобы выгрести весь мусор")
 }
 
 computer_scene_handle_input :: proc(input: Input, scene: ^ComputerScene) {
@@ -367,7 +360,7 @@ main :: proc() {
 		case .KEY_DOWN:
 			if !event.key.repeat {
 				#partial switch event.key.scancode {
-				case .A ..= .Z, .COMMA, .PERIOD, .SLASH, .SEMICOLON, .LEFTBRACKET, .RIGHTBRACKET, .SPACE, .RETURN, .APOSTROPHE:
+				case .A ..= .Z, .COMMA, .PERIOD, .SLASH, .SEMICOLON, .LEFTBRACKET, .RIGHTBRACKET, .SPACE, .APOSTROPHE:
 					as.input.any_key_down = true
 				}
 			}
