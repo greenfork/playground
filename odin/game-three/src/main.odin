@@ -9,7 +9,7 @@ import "core:math"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
-AppState :: struct {
+App_State :: struct {
 	window: ^sdl.Window,
 	renderer: ^sdl.Renderer,
 	input: Input,
@@ -24,8 +24,8 @@ LOGICAL_SCREEN_HEIGHT :: 480*SCREEN_MULTIPLIER
 
 COMPUTER_SCREEN_RECT :: sdl.FRect{72*SCREEN_MULTIPLIER,42*SCREEN_MULTIPLIER,470*SCREEN_MULTIPLIER,303*SCREEN_MULTIPLIER}
 
-TextureType :: enum { ComputerSceneSelectedMonitor, ComputerSceneSelectedBeer, ComputerSceneSelectedPowerButton, DialogBubble }
-Textures :: [TextureType]^sdl.Texture
+Texture_Type :: enum { Computer_Scene_Selected_Monitor, Computer_Scene_Selected_Beer, Computer_Scene_Selected_Power_Button, Dialog_Bubble }
+Textures :: [Texture_Type]^sdl.Texture
 texture_load :: proc(r: ^sdl.Renderer, path: cstring) -> ^sdl.Texture {
 	surface := sdl.LoadPNG(path)
 	if surface == nil {
@@ -39,10 +39,10 @@ texture_load :: proc(r: ^sdl.Renderer, path: cstring) -> ^sdl.Texture {
 	return texture
 }
 textures_init :: proc(r: ^sdl.Renderer, textures: ^Textures) -> bool {
-	textures[.ComputerSceneSelectedMonitor] = texture_load(r, "assets/computer-scene-selected-monitor.png")
-	textures[.ComputerSceneSelectedBeer] = texture_load(r, "assets/computer-scene-selected-beer.png")
-	textures[.ComputerSceneSelectedPowerButton] = texture_load(r, "assets/computer-scene-selected-power-button.png")
-	textures[.DialogBubble] = texture_load(r, "assets/dialog-bubble.png")
+	textures[.Computer_Scene_Selected_Monitor] = texture_load(r, "assets/computer-scene-selected-monitor.png")
+	textures[.Computer_Scene_Selected_Beer] = texture_load(r, "assets/computer-scene-selected-beer.png")
+	textures[.Computer_Scene_Selected_Power_Button] = texture_load(r, "assets/computer-scene-selected-power-button.png")
+	textures[.Dialog_Bubble] = texture_load(r, "assets/dialog-bubble.png")
 	return true
 }
 
@@ -50,7 +50,7 @@ font_init :: proc() -> ^sdl_ttf.Font {
 	font := sdl_ttf.OpenFont("assets/VictorMono-Regular.ttf", 64)
 	return font
 }
-font_draw :: proc(appstate: ^AppState, str: cstring, x, y: f32, font_size: f32, color: sdl.Color, wrap_width: c.int) -> bool {
+font_draw :: proc(appstate: ^App_State, str: cstring, x, y: f32, font_size: f32, color: sdl.Color, wrap_width: c.int) -> bool {
 	if (cast([^]u8)str)[0] == 0x0000 { return true }
 
 	sdl_ttf.SetFontSize(appstate.font, font_size)
@@ -84,8 +84,8 @@ world_init :: proc(w: ^World) {
 	w.scene = computer_scene_init()
 }
 
-Scene :: union { ComputerScene }
-ComputerScene :: struct {
+Scene :: union { Computer_Scene }
+Computer_Scene :: struct {
 	screen_text: string,
 	offset: int,
 	index: int,
@@ -94,7 +94,7 @@ ComputerScene :: struct {
 	lines: int,
 	max_lines: int,
 	max_columns: int,
-	selected_thing: enum { Monitor, Beer, PowerButton }
+	selected_thing: enum { Monitor, Beer, Power_Button }
 }
 
 SCREEN_TEXT :: `# frozen_string_literal: true
@@ -170,8 +170,8 @@ module Pcelka
   end
 end`
 
-computer_scene_init :: proc() -> ComputerScene {
-	return ComputerScene{
+computer_scene_init :: proc() -> Computer_Scene {
+	return Computer_Scene{
 		screen_text = SCREEN_TEXT,
 		column_number = 1,
 		line_number = 1,
@@ -182,23 +182,23 @@ computer_scene_init :: proc() -> ComputerScene {
 	}
 }
 
-InputKey :: enum { Left, Right, Up, Down, Enter, Space }
+Input_Key :: enum { Left, Right, Up, Down, Enter, Space }
 Input :: struct {
-	keys: [InputKey]bool,
+	keys: [Input_Key]bool,
 	any_key_pressed: bool,
 	any_key_down: bool,
 }
 
 Vec2 :: [2]f32
 
-computer_scene_draw :: proc(appstate: ^AppState, scene: ComputerScene) {
+computer_scene_draw :: proc(appstate: ^App_State, scene: Computer_Scene) {
 	draw_bounding_rect :: proc(r: ^sdl.Renderer) {
 		sdl.SetRenderDrawColor(r, 255, 0, 0, 255)
 		rect := COMPUTER_SCREEN_RECT
 		sdl.RenderRect(r, &rect)
 	}
 
-	draw_text :: proc(appstate: ^AppState, scene: ComputerScene) {
+	draw_text :: proc(appstate: ^App_State, scene: Computer_Scene) {
 		buf: [2048]byte
 		mem.copy(raw_data(buf[:]), raw_data(scene.screen_text[scene.offset:]), scene.index - scene.offset)
 		buf[scene.index] = 0
@@ -211,7 +211,7 @@ computer_scene_draw :: proc(appstate: ^AppState, scene: ComputerScene) {
 	dialog_bubble_draw(appstate, "Добавляем грёбаный аксессор...\nТак, стоп, что это за хрень...\nАаааа, точно! Я же неделю назад сделал эту фичу, чтобы выгрести весь мусор")
 }
 
-computer_scene_handle_input :: proc(input: Input, scene: ^ComputerScene) {
+computer_scene_handle_input :: proc(input: Input, scene: ^Computer_Scene) {
 	if input.any_key_down && scene.selected_thing == .Monitor {
 		inc: int
 		newlines: int
@@ -242,34 +242,34 @@ computer_scene_handle_input :: proc(input: Input, scene: ^ComputerScene) {
 	if input.keys[.Left] {
 		switch scene.selected_thing {
 		case .Monitor:
-		case .Beer, .PowerButton:
+		case .Beer, .Power_Button:
 			scene.selected_thing = .Monitor
 		}
 	}
 	if input.keys[.Right] {
 		switch scene.selected_thing {
 		case .Monitor:
-			scene.selected_thing = .PowerButton
-		case .Beer, .PowerButton:
+			scene.selected_thing = .Power_Button
+		case .Beer, .Power_Button:
 		}
 	}
 	if input.keys[.Up] {
 		switch scene.selected_thing {
-		case .Monitor, .PowerButton:
+		case .Monitor, .Power_Button:
 		case .Beer:
-			scene.selected_thing = .PowerButton
+			scene.selected_thing = .Power_Button
 		}
 	}
 	if input.keys[.Down] {
 		switch scene.selected_thing {
 		case .Monitor, .Beer:
-		case .PowerButton:
+		case .Power_Button:
 			scene.selected_thing = .Beer
 		}
 	}
 }
 
-handle_input :: proc(as: ^AppState) {
+handle_input :: proc(as: ^App_State) {
 	as.input.any_key_pressed = false
 	for key in as.input.keys {
 		if key {
@@ -279,27 +279,27 @@ handle_input :: proc(as: ^AppState) {
 	}
 
 	switch &scene in as.world.scene {
-	case ComputerScene:
+	case Computer_Scene:
 		computer_scene_handle_input(as.input, &scene)
 	}
 }
 
-draw :: proc(as: ^AppState) {
+draw :: proc(as: ^App_State) {
 	r := as.renderer
 
 	switch scene in as.world.scene {
-	case ComputerScene:
+	case Computer_Scene:
 		sdl.SetRenderDrawColor(r, 51, 51, 51, 255)
 		sdl.RenderClear(r)
 
 		full_screen_texture: ^sdl.Texture
 		switch scene.selected_thing {
 		case .Monitor:
-			full_screen_texture = as.textures[.ComputerSceneSelectedMonitor]
+			full_screen_texture = as.textures[.Computer_Scene_Selected_Monitor]
 		case .Beer:
-			full_screen_texture = as.textures[.ComputerSceneSelectedBeer]
-		case .PowerButton:
-			full_screen_texture = as.textures[.ComputerSceneSelectedPowerButton]
+			full_screen_texture = as.textures[.Computer_Scene_Selected_Beer]
+		case .Power_Button:
+			full_screen_texture = as.textures[.Computer_Scene_Selected_Power_Button]
 		}
 		sdl.RenderTexture(r, full_screen_texture, nil, nil)
 
@@ -314,7 +314,7 @@ draw :: proc(as: ^AppState) {
 main :: proc() {
 	init :: proc "c" (appstate: ^rawptr, argc: c.int, argv: [^]cstring) -> sdl.AppResult {
 		context = runtime.default_context()
-		as := new(AppState)
+		as := new(App_State)
 		world_init(&as.world)
 		appstate^ = as
 
@@ -352,7 +352,7 @@ main :: proc() {
 	}
 	events :: proc "c" (appstate: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 		context = runtime.default_context()
-		as := cast(^AppState)appstate
+		as := cast(^App_State)appstate
 
 		#partial switch event.type {
 		case .QUIT:
@@ -387,7 +387,7 @@ main :: proc() {
 	}
 	iterate :: proc "c" (appstate: rawptr) -> sdl.AppResult {
 		context = runtime.default_context()
-		as := cast(^AppState)appstate
+		as := cast(^App_State)appstate
 		handle_input(as)
 		draw(as)
 		as.input.any_key_down = false
@@ -395,7 +395,7 @@ main :: proc() {
 	}
 	quit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
 		context = runtime.default_context()
-		as := cast(^AppState)appstate
+		as := cast(^App_State)appstate
 		for tx in as.textures {
 			sdl.DestroyTexture(tx)
 		}
