@@ -24,21 +24,24 @@ LOGICAL_SCREEN_HEIGHT :: 480*SCREEN_MULTIPLIER
 
 COMPUTER_SCREEN_RECT :: sdl.FRect{72*SCREEN_MULTIPLIER,42*SCREEN_MULTIPLIER,470*SCREEN_MULTIPLIER,303*SCREEN_MULTIPLIER}
 
-TextureType :: enum { Computer }
+TextureType :: enum { ComputerSceneSelectedMonitor, ComputerSceneSelectedBeer, ComputerSceneSelectedPowerButton }
 Textures :: [TextureType]^sdl.Texture
-textures_init :: proc(r: ^sdl.Renderer, textures: ^Textures) -> bool {
-	surface := sdl.LoadPNG("assets/computer-screen.png")
+texture_load :: proc(r: ^sdl.Renderer, path: cstring) -> ^sdl.Texture {
+	surface := sdl.LoadPNG(path)
 	if surface == nil {
 		sdl.Log("computer-screen.png surface failed to load: %s", sdl.GetError())
-		return false
 	}
 	texture := sdl.CreateTextureFromSurface(r, surface)
 	if texture == nil {
 		sdl.Log("computer-screen.png texture failed to load: %s", sdl.GetError())
-		return false
 	}
 	sdl.DestroySurface(surface)
-	textures[.Computer] = texture
+	return texture
+}
+textures_init :: proc(r: ^sdl.Renderer, textures: ^Textures) -> bool {
+	textures[.ComputerSceneSelectedMonitor] = texture_load(r, "assets/computer-scene-selected-monitor.png")
+	textures[.ComputerSceneSelectedBeer] = texture_load(r, "assets/computer-scene-selected-beer.png")
+	textures[.ComputerSceneSelectedPowerButton] = texture_load(r, "assets/computer-scene-selected-power-button.png")
 	return true
 }
 
@@ -90,6 +93,7 @@ ComputerScene :: struct {
 	lines: int,
 	max_lines: int,
 	max_columns: int,
+	selected_thing: enum { Monitor, Beer, PowerButton }
 }
 
 SCREEN_TEXT2 :: `A
@@ -182,10 +186,11 @@ computer_scene_init :: proc() -> ComputerScene {
 		lines = 1,
 		max_lines = 16,
 		max_columns = 53,
+		selected_thing = .Monitor,
 	}
 }
 
-InputKey :: enum { Left, Right, Up, Down }
+InputKey :: enum { Left, Right, Up, Down, Enter, Space }
 Input :: struct {
 	keys: [InputKey]bool,
 	any_key_pressed: bool,
@@ -214,7 +219,7 @@ computer_scene_draw :: proc(appstate: ^AppState, scene: ComputerScene) {
 }
 
 computer_scene_handle_input :: proc(input: Input, scene: ^ComputerScene) {
-	if input.any_key_down {
+	if input.any_key_down && scene.selected_thing == .Monitor {
 		inc: int
 		newlines: int
 		for r in scene.screen_text[scene.index:] {
@@ -240,6 +245,35 @@ computer_scene_handle_input :: proc(input: Input, scene: ^ComputerScene) {
 		}
 		scene.index = math.min(scene.index+1, len(scene.screen_text))
 	}
+
+	if input.keys[.Left] {
+		switch scene.selected_thing {
+		case .Monitor:
+		case .Beer, .PowerButton:
+			scene.selected_thing = .Monitor
+		}
+	}
+	if input.keys[.Right] {
+		switch scene.selected_thing {
+		case .Monitor:
+			scene.selected_thing = .PowerButton
+		case .Beer, .PowerButton:
+		}
+	}
+	if input.keys[.Up] {
+		switch scene.selected_thing {
+		case .Monitor, .PowerButton:
+		case .Beer:
+			scene.selected_thing = .PowerButton
+		}
+	}
+	if input.keys[.Down] {
+		switch scene.selected_thing {
+		case .Monitor, .Beer:
+		case .PowerButton:
+			scene.selected_thing = .Beer
+		}
+	}
 }
 
 handle_input :: proc(as: ^AppState) {
@@ -250,11 +284,6 @@ handle_input :: proc(as: ^AppState) {
 			break
 		}
 	}
-
-	if as.input.keys[.Left] {  }
-	if as.input.keys[.Right] {  }
-	if as.input.keys[.Up] {  }
-	if as.input.keys[.Down] {  }
 
 	switch &scene in as.world.scene {
 	case ComputerScene:
@@ -270,7 +299,16 @@ draw :: proc(as: ^AppState) {
 		sdl.SetRenderDrawColor(r, 51, 51, 51, 255)
 		sdl.RenderClear(r)
 
-		sdl.RenderTexture(r, as.textures[.Computer], nil, nil)
+		full_screen_texture: ^sdl.Texture
+		switch scene.selected_thing {
+		case .Monitor:
+			full_screen_texture = as.textures[.ComputerSceneSelectedMonitor]
+		case .Beer:
+			full_screen_texture = as.textures[.ComputerSceneSelectedBeer]
+		case .PowerButton:
+			full_screen_texture = as.textures[.ComputerSceneSelectedPowerButton]
+		}
+		sdl.RenderTexture(r, full_screen_texture, nil, nil)
 
 		computer_scene_draw(as, scene)
 
@@ -339,6 +377,8 @@ main :: proc() {
 			case .RIGHT: as.input.keys[.Right] = true
 			case .UP: as.input.keys[.Up] = true
 			case .DOWN: as.input.keys[.Down] = true
+			case .RETURN: as.input.keys[.Enter] = true
+			case .SPACE: as.input.keys[.Space] = true
 			}
 		case .KEY_UP:
 			#partial switch event.key.scancode {
@@ -346,6 +386,8 @@ main :: proc() {
 			case .RIGHT: as.input.keys[.Right] = false
 			case .UP: as.input.keys[.Up] = false
 			case .DOWN: as.input.keys[.Down] = false
+			case .RETURN: as.input.keys[.Enter] = false
+			case .SPACE: as.input.keys[.Space] = false
 			}
 		}
 		return .CONTINUE
@@ -361,7 +403,9 @@ main :: proc() {
 	quit :: proc "c" (appstate: rawptr, result: sdl.AppResult) {
 		context = runtime.default_context()
 		as := cast(^AppState)appstate
-		sdl.DestroyTexture(as.textures[.Computer])
+		for tx in as.textures {
+			sdl.DestroyTexture(tx)
+		}
 		free(as)
 		sdl_ttf.Quit()
 		sdl.Quit()

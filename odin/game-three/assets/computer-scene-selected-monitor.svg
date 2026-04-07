@@ -8,8 +8,8 @@
    version="1.1"
    id="svg1"
    inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
-   sodipodi:docname="computer-screen.svg"
-   inkscape:export-filename="computer-screen.png"
+   sodipodi:docname="computer-screen-selected-monitor.svg"
+   inkscape:export-filename="computer-screen-selected-power-button.png"
    inkscape:export-xdpi="192"
    inkscape:export-ydpi="192"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -26,15 +26,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="1.0279172"
-     inkscape:cx="391.5685"
-     inkscape:cy="242.72383"
+     inkscape:zoom="1.0402853"
+     inkscape:cx="434.97682"
+     inkscape:cy="198.50324"
      inkscape:window-width="1536"
      inkscape:window-height="834"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer5" />
+     inkscape:current-layer="layer2" />
   <defs
      id="defs1">
     <filter
@@ -131,10 +131,10 @@
        inkscape:label="3D Marble"
        inkscape:menu="Materials"
        inkscape:menu-tooltip="3D warped marble texture"
-       height="1.3631672"
-       y="-0.18158359"
-       width="1.3648138"
-       x="-0.1824069"
+       height="1.3549507"
+       y="-0.17747537"
+       width="1.3565601"
+       x="-0.17828004"
        style="color-interpolation-filters:sRGB;"
        id="filter220">
       <feGaussianBlur
@@ -238,14 +238,14 @@
      inkscape:label="beer">
     <g
        id="g113"
-       style="filter:url(#filter220)">
+       style="filter:url(#filter220);stroke:none;stroke-opacity:1;stroke-width:5;stroke-dasharray:none">
       <path
          id="path89"
-         style="fill:#b6d2e0;fill-opacity:1;stroke:#477185;stroke-opacity:1"
+         style="fill:#b6d2e0;fill-opacity:1;stroke:none;stroke-opacity:1;stroke-width:5;stroke-dasharray:none"
          d="m 696.64648,329.58008 c -26.35125,-1e-5 -47.71226,6.10388 -47.70898,13.63281 v 0.0137 94.41406 0.0156 c 4.9e-4,7.52817 21.3604,13.63087 47.70898,13.63086 26.34859,2e-5 47.7085,-6.10269 47.70899,-13.63086 v -20.74609 c 11.79962,-1.59179 25.73966,-31.88412 25.73973,-48.53294 -8e-5,-16.64883 -13.94012,-14.2034 -25.73973,-15.79519 v -9.36914 c 0.003,-7.52893 -21.35774,-13.63283 -47.70899,-13.63281 z m 47.80079,30.26172 c 6.25689,0.24636 22.02839,-0.45151 19.56217,11.26028 -2.59827,12.33886 -13.3049,34.78436 -19.56217,35.03073 z"
          sodipodi:nodetypes="ssccssccsccscscc" />
       <ellipse
-         style="fill:#b6d2e0;fill-opacity:1;stroke:#477185;stroke-width:1.10335;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:#b6d2e0;fill-opacity:1;stroke:none;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
          id="path91"
          cx="696.64648"
          cy="340.87402"
@@ -685,10 +685,10 @@
      inkscape:label="computar"
      transform="translate(184.25816,0.88165213)">
     <rect
-       style="fill:#bab1ab;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:4.81586;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
+       style="fill:#bab1ab;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:4.75566;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
        id="rect4"
        width="154.16666"
-       height="309.52383"
+       height="301.83365"
        x="485.83334"
        y="16.666666" />
     <g
@@ -714,8 +714,8 @@
        style="fill:#d0ae95;fill-opacity:1;fill-rule:nonzero;stroke:#856147;stroke-width:1;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
        id="path6"
        cx="562.91669"
-       cy="152.53685"
-       r="9.1409359" />
+       cy="278.89413"
+       r="17.111423" />
     <rect
        style="fill:#bab1ab;fill-opacity:1;fill-rule:nonzero;stroke:#856147;stroke-width:1.04362;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
        id="rect7"
@@ -744,7 +744,7 @@
      id="layer1"
      transform="translate(34.615385,9.1460868)">
     <rect
-       style="display:inline;fill:#c9af9c;fill-opacity:1;fill-rule:nonzero;stroke:#f0cd75;stroke-width:5.32788;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
+       style="display:inline;fill:#c9af9c;fill-opacity:1;fill-rule:nonzero;stroke:#f0cd75;stroke-width:5.329;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
        id="rect2"
        width="545.0451"
        height="364.94232"
