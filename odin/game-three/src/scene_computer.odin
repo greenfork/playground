@@ -6,7 +6,7 @@ import "core:math"
 import sdl "vendor:sdl3"
 
 Computer_Scene :: struct {
-	screen_text: string,
+	code_source: Code_Source,
 	offset: int,
 	index: int,
 	column_number: int,
@@ -19,11 +19,9 @@ Computer_Scene :: struct {
 
 COMPUTER_SCREEN_RECT :: sdl.FRect{72*SCREEN_MULTIPLIER,42*SCREEN_MULTIPLIER,470*SCREEN_MULTIPLIER,303*SCREEN_MULTIPLIER}
 
-SCREEN_TEXT :: #load("../assets/code_source/pcelka_server.rb", string)
-
 computer_scene_init :: proc() -> Computer_Scene {
 	return Computer_Scene{
-		screen_text = SCREEN_TEXT,
+		code_source = code_source_get(.Pcelka_Server),
 		column_number = 1,
 		line_number = 1,
 		lines = 1,
@@ -42,7 +40,7 @@ computer_scene_draw :: proc(appstate: ^App_State, scene: Computer_Scene) {
 
 	draw_text :: proc(appstate: ^App_State, scene: Computer_Scene) {
 		buf: [2048]byte
-		mem.copy(raw_data(buf[:]), raw_data(scene.screen_text[scene.offset:]), scene.index - scene.offset)
+		mem.copy(raw_data(buf[:]), raw_data(scene.code_source.src[scene.offset:]), scene.index - scene.offset)
 		buf[scene.index] = 0
 		x, y := COMPUTER_SCREEN_RECT.x, COMPUTER_SCREEN_RECT.y
 		font_draw(appstate, cstring(raw_data(buf[:])), x, y, 16*SCREEN_MULTIPLIER, sdl.Color{0,255,0,255}, 0)
@@ -66,7 +64,9 @@ computer_scene_draw :: proc(appstate: ^App_State, scene: Computer_Scene) {
 
 	// draw_bounding_rect(appstate.renderer)
 	draw_text(appstate, scene)
-	dialog_bubble_draw(appstate, "Добавляем грёбаный аксессор...\nТак, стоп, что это за хрень...\nАаааа, точно! Я же неделю назад сделал эту фичу, чтобы выгрести весь мусор")
+	// if text, ok := code_source_comment(scene); ok {
+	// 	dialog_bubble_draw(appstate, text)
+	// }
 
 	sdl.RenderPresent(r)
 }
@@ -75,7 +75,7 @@ computer_scene_handle_input :: proc(input: Input, scene: ^Computer_Scene) {
 	if input.any_key_down && scene.selected_thing == .Monitor {
 		inc: int
 		newlines: int
-		for r in scene.screen_text[scene.index:] {
+		for r in scene.code_source.src[scene.index:] {
 			if r == '\n' {
 				newlines += 1
 				scene.column_number = 1
@@ -93,10 +93,10 @@ computer_scene_handle_input :: proc(input: Input, scene: ^Computer_Scene) {
 		scene.lines += newlines
 		lines_proficit := scene.lines - scene.max_lines
 		for _ in 0..<lines_proficit {
-			scene.offset += strings.index_rune(scene.screen_text[scene.offset:], '\n') + 1
+			scene.offset += strings.index_rune(scene.code_source.src[scene.offset:], '\n') + 1
 			scene.lines -= 1
 		}
-		scene.index = math.min(scene.index+1, len(scene.screen_text))
+		scene.index = math.min(scene.index+1, len(scene.code_source.src))
 	}
 
 	if input.keys[.Left] {
