@@ -1,0 +1,14 @@
+{ "columns":10,
+ "image":"TilesA2.png",
+ "imageheight":192,
+ "imagewidth":320,
+ "margin":0,
+ "name":"lpc-winter-tileset",
+ "spacing":0,
+ "tilecount":60,
+ "tiledversion":"1.12.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}
