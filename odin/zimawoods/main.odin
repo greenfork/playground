@@ -28,8 +28,8 @@ Entity :: struct {
 	pos: Vec2,
 	size: Vec2,
 	kind: Entity_Kind,
+	dir: Direction,
 }
-player: ^Entity
 
 Entity_Kind :: enum { Player, Tree }
 
@@ -79,6 +79,44 @@ ent_draw :: proc(ent: ^Entities) {
 
 entity_draw :: proc(e: Entity) {
 	k2.draw_rect_vec(e.pos, CELL_SIZE * e.size, k2.BROWN)
+}
+
+player: ^Entity
+Direction :: enum { Up, Down, Left, Right }
+player_textures: [Direction][6]k2.Texture
+player_textures_load :: proc() {
+	player_textures[.Up] = {
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_1.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_2.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_3.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_4.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_5.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Up/Zarutska_Run_Up_6.png")),
+	}
+	player_textures[.Down] = {
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_1.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_2.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_3.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_4.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_5.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Down/Zarutska_Run_Down_6.png")),
+	}
+	player_textures[.Left] = {
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_1.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_2.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_3.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_4.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_5.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Left/Zarutska_Run_Left_6.png")),
+	}
+	player_textures[.Right] = {
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_1.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_2.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_3.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_4.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_5.png")),
+		k2.load_texture_from_bytes(#load("assets/hero/character1/Demo/Zarutska_Brejnev/Right/Zarutska_Run_Right_6.png")),
+	}
 }
 
 main :: proc() {

@@ -50,6 +50,7 @@ texture_load_all :: proc() {
 		texture_load("assets/tilesets/lpc-winter-tiles/TilesB.png")
 	}
 	lpc_winter_map = tiled.parse_tilemap_from_bytes(#load("assets/map1.json"))
+	player_textures_load()
 }
 
 texture_load :: proc($path: string) -> k2.Texture {
