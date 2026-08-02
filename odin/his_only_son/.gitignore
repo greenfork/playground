@@ -1,0 +1,5 @@
+bin/
+build/
+
+assets/*.zip
+assets/christian_pop_n_dance/*.mp3

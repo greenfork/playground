@@ -1,0 +1,27 @@
+{
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+    },
+    "last.exportedFilePath": "/home/king/playground/odin/his_only_son/assets/Tiled",
+    "last.imagePath": "/home/king/playground/odin/his_only_son/assets/TinyTerrors",
+    "map.fixedSize": false,
+    "map.height": 12,
+    "map.lastUsedExportFilter": "All Files (*)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 15,
+    "openFiles": [
+    ],
+    "project": "his_only_son.tiled-project",
+    "property.type": "string",
+    "recentFiles": [
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
