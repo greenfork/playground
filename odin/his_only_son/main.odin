@@ -13,7 +13,9 @@ ZOOM :: 4
 SCREEN_WIDTH :: 240
 SCREEN_HEIGHT :: 180
 
+debug_positions := false
 debug_anim := false
+debug_drawing_queue := false
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -29,8 +31,11 @@ World :: struct {
 	tile_textures: [1]k2.Texture,
 	textures: [Texture_Kind]k2.Texture,
 	game_camera: k2.Camera,
+	game_camera_world_rect: k2.Rect,
+	ui_camera: k2.Camera,
 	player: Player,
 	room: Room,
+	drawing_queue: Drawing_Queue,
 }
 w: World
 world_init :: proc(world: ^World) {
@@ -44,23 +49,17 @@ world_destroy :: proc(world: ^World) {
 	free_all(world.arena_allocator)
 }
 
-Texture_Kind :: enum { Chest }
+Texture_Kind :: enum { Chest, Player_Idle, Player_Walk }
 Direction :: enum { East, West, North, South }
 
 Player :: struct {
 	pos: Vec2,
 	size: Vec2,
-	textures_idle: k2.Texture,
-	textures_walk: k2.Texture,
 	dir: Direction,
 	speed: f32,
 	is_moving: bool,
 	animation_dt_idle: f32,
 	animation_dt_walk: f32,
-}
-player_load_textures :: proc(player: ^Player) {
-	player.textures_idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png"))
-	player.textures_walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png"))
 }
 player_draw :: proc(player: Player) {
 	player_pos := player.pos - {0,16}
@@ -75,7 +74,7 @@ player_draw :: proc(player: Player) {
 		// +1 because first walk frame is the same as idle frame,
 		// hero moves but no animation starts playing
 		src_rect.x = f32(int(player.animation_dt_walk*player.speed/8 + 1) % 4) * TILE_WIDTH
-		k2.draw_texture_rect(player.textures_walk, src_rect, player_pos)
+		drawing_queue_add({&w.textures[.Player_Walk], src_rect, player_pos})
 	} else {
 		src_rect: k2.Rect
 		switch player.dir {
@@ -90,15 +89,16 @@ player_draw :: proc(player: Player) {
 			// Truncate the whole part of `animation_dt_idle` so that
 			// animation always starts at the first frame.
 			src_rect.x = f32(int((player.animation_dt_idle - math.trunc(player.animation_dt_idle))*6) % 5) * TILE_WIDTH
-			k2.draw_texture_rect(player.textures_idle, src_rect, player_pos)
-		} else {
-			k2.draw_texture_rect(player.textures_idle, src_rect, player_pos)
 		}
+		drawing_queue_add({&w.textures[.Player_Idle], src_rect, player_pos})
 	}
 }
 player_draw_debug_info :: proc(player: Player) {
 	if debug_anim {
 		k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
+	}
+	if debug_positions {
+		k2.draw_text(fmt.tprintf("pos: (%v,  %v)", player.pos.x, player.pos.y), player.pos + {0,-player.size.y-8}, 4, k2.WHITE)
 	}
 }
 
@@ -116,7 +116,7 @@ interactables_draw :: proc(interactables: []Interactable) {
 	skew := Vec2{0,-TILE_HEIGHT}
 	for interactable in interactables {
 		switch interactable.kind {
-		case .Chest: k2.draw_texture_rect(w.textures[.Chest], src_rect, interactable.pos+skew)
+		case .Chest: drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
 		}
 	}
 }
@@ -187,7 +187,6 @@ init :: proc() {
 	load_textures()
 	load_maps()
 	load_current_room(w.maps[w.current_map_idx])
-	player_load_textures(&w.player)
 	w.player.speed = 50
 	w.player.size = {16,16}
 }
@@ -210,10 +209,24 @@ step :: proc() -> bool {
 
 	process_input()
 
-	w.game_camera = {
+	{
+		w.game_camera = {
+			zoom = f32(k2.get_screen_height()) / SCREEN_HEIGHT,
+			target = w.player.pos + {TILE_WIDTH/2,-TILE_HEIGHT/2},
+			offset = {f32(k2.get_screen_width())/2, f32(k2.get_screen_height())/2},
+		}
+		game_camera_world_matrix := k2.camera_world_matrix(w.game_camera)
+		top_left := (game_camera_world_matrix * k2.Vec4{0,0,0,1}).xy
+		bottom_right := (game_camera_world_matrix * k2.Vec4{SCREEN_WIDTH*w.game_camera.zoom, SCREEN_HEIGHT*w.game_camera.zoom, 0, 1}).xy
+		w.game_camera_world_rect = k2.Rect{
+			top_left.x, top_left.y,
+			bottom_right.x - top_left.x,
+			bottom_right.y - top_left.y,
+		}
+	}
+
+	w.ui_camera = {
 		zoom = f32(k2.get_screen_height()) / SCREEN_HEIGHT,
-		target = w.player.pos + {TILE_WIDTH/2,-TILE_HEIGHT/2},
-		offset = {f32(k2.get_screen_width())/2, f32(k2.get_screen_height())/2},
 	}
 	k2.set_scissor_rect(k2.Rect{
 		0, 0,
@@ -226,7 +239,12 @@ step :: proc() -> bool {
 	draw_map(w.maps[w.current_map_idx])
 	interactables_draw(w.room.interactables[:])
 	player_draw(w.player)
+	drawing_queue_draw(&w.drawing_queue, w.game_camera)
+
 	player_draw_debug_info(w.player)
+
+	k2.set_camera(w.ui_camera)
+	drawing_queue_draw_debug_info(w.drawing_queue)
 	k2.present()
 
 	return true

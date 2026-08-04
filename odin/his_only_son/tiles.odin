@@ -12,6 +12,8 @@ load_textures :: proc() {
 	}
 	w.textures = {
 		.Chest = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Chests.png")),
+		.Player_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png")),
+		.Player_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png")),
 	}
 }
 unload_textures :: proc() {
@@ -26,9 +28,9 @@ load_maps :: proc() {
 }
 
 draw_map :: proc(m: tiled.Map) {
-	draw_tile :: proc(m: tiled.Map, layer: tiled.Layer, chunk: tiled.Chunk, skew_x, skew_y: i32, row, column: i32) {
+	make_drawing_item :: proc(m: tiled.Map, layer: tiled.Layer, chunk: tiled.Chunk, skew_x, skew_y: i32, row, column: i32) -> (di: Drawing_Item, ok: bool) {
 		global_tile_id := chunk.data[row*chunk.width + column]
-		if global_tile_id == 0 { return }
+		if global_tile_id == 0 { return {}, false }
 
 		_flags: tiled.FlippingFlags
 		global_tile_id, _flags = tiled.strip_flags(global_tile_id)
@@ -44,23 +46,26 @@ draw_map :: proc(m: tiled.Map) {
 			w = f32(tileset.tile_width),
 			h = f32(tileset.tile_height),
 		}
-		dst_rect := k2.Rect{
-			x = f32((column+skew_x) * TILE_WIDTH),
-			y = f32((row+skew_y) * TILE_HEIGHT),
-			w = TILE_WIDTH,
-			h = TILE_HEIGHT,
-		}
-		k2.draw_texture_fit(w.tile_textures[tileset_idx], src_rect, dst_rect)
+		dst_pos := Vec2{f32((column+skew_x) * TILE_WIDTH),f32((row+skew_y) * TILE_HEIGHT)}
+		return {&w.tile_textures[tileset_idx], src_rect, dst_pos}, true
 	}
 
 	for layer in m.layers {
+		is_floor := layer.name == "floor"
 		#partial switch layer.type {
 		case .Tile_Layer:
 			if m.infinite {
 				for chunk in layer.chunks {
 					for row in 0..<chunk.height {
 						for column in 0..<chunk.width {
-							draw_tile(m, layer, chunk, chunk.x, chunk.y, row, column)
+							item, ok := make_drawing_item(m, layer, chunk, chunk.x, chunk.y, row, column)
+							if ok {
+								if is_floor {
+									drawing_item_draw(item)
+								} else {
+									drawing_queue_add(item)
+								}
+							}
 						}
 					}
 				}
