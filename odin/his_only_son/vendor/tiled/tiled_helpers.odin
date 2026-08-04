@@ -37,14 +37,14 @@ Flip_Hex :: enum {
 	flip_horizontal,
 	flip_vertical,
 	rotate_60,
-	rotate_120
+	rotate_120,
 }
 FlippingFlags_Hex :: bit_set[Flip_Hex]
 
 strip_flags :: proc(gid: i32) -> (i32, FlippingFlags) {
 	ugid := cast(u32)gid
-	flags := ugid & 0xF0000000;
-	cleared_gid := ugid & 0x0FFFFFFF;
+	flags := ugid & 0xF0000000
+	cleared_gid := ugid & 0x0FFFFFFF
 
 	flip_flags : FlippingFlags
 
@@ -57,8 +57,8 @@ strip_flags :: proc(gid: i32) -> (i32, FlippingFlags) {
 
 strip_flags_hex :: proc(gid: i32) -> (i32, FlippingFlags_Hex) {
 	ugid := cast(u32)gid
-	flags := ugid & 0xF0000000;
-	cleared_gid := ugid & 0x0FFFFFFF;
+	flags := ugid & 0xF0000000
+	cleared_gid := ugid & 0x0FFFFFFF
 
 	flip_flags : FlippingFlags_Hex
 

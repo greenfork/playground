@@ -18,5 +18,11 @@ web:
 server:
 	python -m http.server -d bin/web
 
-.PHONY: build build-debug run run-debug web server
+check:
+	odin check . -collection:myvendor=vendor/ -strict-style
+
+check-watch:
+	fd -e odin . | entr -s "make check"
+
+.PHONY: build build-debug run run-debug web server check check-watch
 .POSIX:

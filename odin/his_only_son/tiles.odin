@@ -16,7 +16,7 @@ load_textures :: proc() {
 
 load_maps :: proc() {
 	w.maps = {
-		tiled.parse_tilemap_from_bytes(#load("assets/Tiled/hallway.json"), allocator=context.allocator)
+		tiled.parse_tilemap_from_bytes(#load("assets/Tiled/hallway.json"), allocator=context.allocator),
 	}
 }
 
@@ -46,7 +46,6 @@ draw_map :: proc(m: tiled.Map) {
 			h = TILE_HEIGHT,
 		}
 		k2.draw_texture_fit(w.textures[tileset_idx], src_rect, dst_rect)
-		
 	}
 
 	for layer in m.layers {
@@ -73,7 +72,6 @@ load_current_room :: proc(m: tiled.Map) {
 		case "chest":
 			append(&w.room.interactables,
 				Interactable{kind=.Chest, pos={f32(object.x), f32(object.y)}})
-		
 		}
 	}
 

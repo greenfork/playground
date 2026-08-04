@@ -123,6 +123,7 @@ init :: proc() {
 
 step :: proc() -> bool {
 	context.logger = logger
+	free_all(context.temp_allocator)
 
 	if !k2.update() {
 		return false
@@ -132,6 +133,8 @@ step :: proc() -> bool {
 
 	w.game_camera = {
 		zoom = f32(k2.get_screen_height()) / SCREEN_HEIGHT,
+		target = w.player.pos + {TILE_WIDTH/2,-TILE_HEIGHT/2},
+		offset = {f32(k2.get_screen_width())/2, f32(k2.get_screen_height())/2},
 	}
 	k2.set_scissor_rect(k2.Rect{
 		0, 0,
