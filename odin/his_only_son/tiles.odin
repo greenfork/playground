@@ -7,16 +7,21 @@ TILE_WIDTH :: 16
 TILE_HEIGHT :: 16
 
 load_textures :: proc() {
-	w.textures = {
+	w.tile_textures = {
 		k2.load_texture_from_bytes(#load("assets/TinyTerrors/Tileset.png")),
-		k2.load_texture_from_bytes(#load("assets/TinyTerrors/Chests.png")),
-		k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png")),
 	}
+	w.textures = {
+		.Chest = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Chests.png")),
+	}
+}
+unload_textures :: proc() {
+	for tex in w.tile_textures { k2.destroy_texture(tex) }
+	for tex in w.textures { k2.destroy_texture(tex) }
 }
 
 load_maps :: proc() {
 	w.maps = {
-		tiled.parse_tilemap_from_bytes(#load("assets/Tiled/hallway.json"), allocator=context.allocator),
+		tiled.parse_tilemap_from_bytes(#load("assets/Tiled/hallway.json"), allocator=w.arena_allocator),
 	}
 }
 
@@ -45,7 +50,7 @@ draw_map :: proc(m: tiled.Map) {
 			w = TILE_WIDTH,
 			h = TILE_HEIGHT,
 		}
-		k2.draw_texture_fit(w.textures[tileset_idx], src_rect, dst_rect)
+		k2.draw_texture_fit(w.tile_textures[tileset_idx], src_rect, dst_rect)
 	}
 
 	for layer in m.layers {

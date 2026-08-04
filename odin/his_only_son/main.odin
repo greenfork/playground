@@ -7,6 +7,7 @@ import "core:mem"
 import "core:fmt"
 import "core:math/linalg"
 import "core:math"
+import vmem "core:mem/virtual"
 
 ZOOM :: 4
 SCREEN_WIDTH :: 240
@@ -19,15 +20,29 @@ Vec2 :: k2.Vec2
 logger: log.Logger
 
 World :: struct {
+	arena: vmem.Arena,
+	arena_allocator: mem.Allocator,
 	maps: [1]tiled.Map,
 	current_map_idx: int,
-	textures: [3]k2.Texture,
+	tile_textures: [1]k2.Texture,
+	textures: [Texture_Kind]k2.Texture,
 	game_camera: k2.Camera,
 	player: Player,
 	room: Room,
 }
 w: World
+world_init :: proc(world: ^World) {
+	arena: vmem.Arena
+	arena_err := vmem.arena_init_growing(&arena)
+	log.ensuref(arena_err == nil, "Virtual Arena init failed")
+	world.arena = arena
+	world.arena_allocator = vmem.arena_allocator(&world.arena)
+}
+world_destroy :: proc(world: ^World) {
+	free_all(world.arena_allocator)
+}
 
+Texture_Kind :: enum { Chest }
 Direction :: enum { East, West, North, South }
 
 Player :: struct {
@@ -88,10 +103,19 @@ Room :: struct {
 }
 
 Interactable :: struct {
-	kind: Interactable_Type,
+	kind: Interactable_Kind,
 	pos: Vec2,
 }
-Interactable_Type :: enum { Chest }
+Interactable_Kind :: enum { Chest }
+interactables_draw :: proc(interactables: []Interactable) {
+	src_rect := k2.Rect{0,0,TILE_WIDTH,TILE_HEIGHT}
+	skew := Vec2{0,-TILE_HEIGHT}
+	for interactable in interactables {
+		switch interactable.kind {
+		case .Chest: k2.draw_texture_rect(w.textures[.Chest], src_rect, interactable.pos+skew)
+		}
+	}
+}
 
 process_input :: proc() {
 	movement: Vec2
@@ -139,21 +163,21 @@ main :: proc() {
 	for step() {}
 	shutdown()
 
-	// JSON needs to be freed via arena, otherwise it spams
-	// when ODIN_DEBUG {
-	// 	if len(track.allocation_map) > 0 {
-	// 		fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
-	// 		for _, entry in track.allocation_map {
-	// 			fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
-	// 		}
-	// 	}
-	// 	mem.tracking_allocator_destroy(&track)
-	// }
+	when ODIN_DEBUG {
+		if len(track.allocation_map) > 0 {
+			fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
+			for _, entry in track.allocation_map {
+				fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
+			}
+		}
+		mem.tracking_allocator_destroy(&track)
+	}
 }
 
 init :: proc() {
 	logger = log.create_console_logger()
 	context.logger = logger
+	world_init(&w)
 
 	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed})
 	load_textures()
@@ -196,6 +220,7 @@ step :: proc() -> bool {
 
 	k2.clear(BG_COLOR)
 	draw_map(w.maps[w.current_map_idx])
+	interactables_draw(w.room.interactables[:])
 	player_draw(w.player)
 	player_draw_debug_info(w.player)
 	k2.present()
@@ -206,7 +231,8 @@ step :: proc() -> bool {
 shutdown :: proc() {
 	context.logger = logger
 
+	unload_textures()
 	k2.shutdown()
-
 	log.destroy_console_logger(logger)
+	world_destroy(&w)
 }
