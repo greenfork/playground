@@ -13,6 +13,8 @@ ZOOM :: 4
 SCREEN_WIDTH :: 240
 SCREEN_HEIGHT :: 180
 
+debug_anim := false
+
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
 Vec2 :: k2.Vec2
@@ -95,7 +97,9 @@ player_draw :: proc(player: Player) {
 	}
 }
 player_draw_debug_info :: proc(player: Player) {
-	k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
+	if debug_anim {
+		k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
+	}
 }
 
 Room :: struct {
