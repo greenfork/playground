@@ -2,6 +2,7 @@ package his_only_son
 
 import k2 "karl2d"
 import "myvendor:tiled"
+import "core:log"
 
 TILE_WIDTH :: 16
 TILE_HEIGHT :: 16
@@ -75,21 +76,37 @@ draw_map :: proc(m: tiled.Map) {
 }
 
 load_current_room :: proc(m: tiled.Map) {
-	load_object :: proc(object: tiled.Object) {
+	load_interactable :: proc(object: tiled.Object) {
 		switch object.name {
 		case "hero":
 			w.player.pos = {f32(object.x), f32(object.y)}
 		case "chest":
-			append(&w.room.interactables,
-				Interactable{kind=.Chest, pos={f32(object.x), f32(object.y)}})
+			interactable := Interactable{kind=.Chest, pos={f32(object.x), f32(object.y)}}
+			if append(&w.room.interactables, interactable) == 0 {
+				log.errorf("Failed to push to interactables: %v", interactable)
+			}
+		}
+	}
+
+	load_collider :: proc(object: tiled.Object) {
+		collider := Collider{rect=k2.Rect{object.x, object.y,
+			object.width, object.height}}
+		if append(&w.room.colliders, collider) == 0 {
+			log.errorf("Failed to push to colliders: %v", collider)
 		}
 	}
 
 	for layer in m.layers {
+		is_interactable := layer.name == "interactables"
+		is_collider := layer.name == "colliders"
+
 		#partial switch layer.type {
 		case .Object_Group:
-			for object in layer.objects {
-				load_object(object)
+			if is_interactable {
+				for object in layer.objects { load_interactable(object) }
+			}
+			if is_collider {
+				for object in layer.objects { load_collider(object)}
 			}
 		}
 	}

@@ -15,6 +15,7 @@ SCREEN_HEIGHT :: 180
 debug_positions := false
 debug_anim := false
 debug_drawing_queue := false
+debug_collisions := false
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -25,6 +26,8 @@ logger: log.Logger
 World :: struct {
 	arena: mem.Arena,
 	arena_allocator: mem.Allocator,
+	arena_buffer: []byte,
+
 	maps: [1]tiled.Map,
 	current_map_idx: int,
 	tile_textures: [1]k2.Texture,
@@ -38,14 +41,15 @@ World :: struct {
 }
 w: World
 world_init :: proc(world: ^World) {
-	arena_buffer := make([]byte, 12000)
+	world.arena_buffer = make([]byte, 12000)
 	arena: mem.Arena
-	mem.arena_init(&arena, arena_buffer[:])
+	mem.arena_init(&arena, world.arena_buffer[:])
 	world.arena = arena
 	world.arena_allocator = mem.arena_allocator(&world.arena)
 }
 world_destroy :: proc(world: ^World) {
 	free_all(world.arena_allocator)
+	delete(world.arena_buffer)
 }
 
 Texture_Kind :: enum { Chest, Player_Idle, Player_Walk }
@@ -92,6 +96,9 @@ player_draw :: proc(player: Player) {
 		drawing_queue_add({&w.textures[.Player_Idle], src_rect, player_pos})
 	}
 }
+player_rect :: proc(player: Player) -> k2.Rect {
+	return k2.rect_from_pos_size(player.pos - {0,16}, player.size)
+}
 player_draw_debug_info :: proc(player: Player) {
 	if debug_anim {
 		k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
@@ -99,10 +106,14 @@ player_draw_debug_info :: proc(player: Player) {
 	if debug_positions {
 		k2.draw_text(fmt.tprintf("pos: (%v,  %v)", player.pos.x, player.pos.y), player.pos + {0,-player.size.y-8}, 4, k2.WHITE)
 	}
+	if debug_collisions {
+		k2.draw_rect_outline(player_rect(player), 1, k2.MAGENTA)
+	}
 }
 
 Room :: struct {
 	interactables: [dynamic; 32]Interactable,
+	colliders: [dynamic; 32]Collider,
 }
 
 Interactable :: struct {
@@ -116,6 +127,17 @@ interactables_draw :: proc(interactables: []Interactable) {
 	for interactable in interactables {
 		switch interactable.kind {
 		case .Chest: drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
+		}
+	}
+}
+
+Collider :: struct {
+	rect: k2.Rect,
+}
+colliders_draw_debug_info :: proc(colliders: []Collider) {
+	if debug_collisions {
+		for collider in colliders {
+			k2.draw_rect_outline(collider.rect, 0.5, k2.PURPLE)
 		}
 	}
 }
@@ -152,7 +174,33 @@ process_input :: proc() {
 
 	dt := k2.get_frame_time()
 	to_move := movement * dt * w.player.speed
-	w.player.pos += to_move
+
+	// When numbers match exactly, overlapping may or may not happen.
+	COLLISION_CORRECTION :: 0.001
+
+	prect: k2.Rect
+	w.player.pos.x += to_move.x
+	prect = player_rect(w.player)
+	for collider in w.room.colliders {
+		if k2.rect_overlapping(prect, collider.rect) {
+			if to_move.x >= 0 {
+				w.player.pos.x = collider.rect.x - prect.w - COLLISION_CORRECTION
+			} else {
+				w.player.pos.x = collider.rect.x + collider.rect.w + COLLISION_CORRECTION
+			}
+		}
+	}
+	w.player.pos.y += to_move.y
+	prect = player_rect(w.player)
+	for collider in w.room.colliders {
+		if k2.rect_overlapping(prect, collider.rect) {
+			if to_move.y >= 0 {
+				w.player.pos.y = collider.rect.y - COLLISION_CORRECTION
+			} else {
+				w.player.pos.y = collider.rect.y + collider.rect.h + prect.h + COLLISION_CORRECTION
+			}
+		}
+	}
 }
 
 main :: proc() {
@@ -240,6 +288,7 @@ step :: proc() -> bool {
 	player_draw(w.player)
 	drawing_queue_draw(&w.drawing_queue, w.game_camera)
 
+	colliders_draw_debug_info(w.room.colliders[:])
 	player_draw_debug_info(w.player)
 
 	k2.set_camera(w.ui_camera)

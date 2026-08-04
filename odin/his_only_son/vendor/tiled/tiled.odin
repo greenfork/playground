@@ -203,17 +203,18 @@ Object :: struct {
 	gid:        i32 `json:"gid"`, // GID, only if object comes from a Tilemap
 	name:       string `json:"name"`, // String assigned to name field in editor
 	type:       string `json:"type"`, // String assigned to type field in editor
-	x:          f64 `json:"x"`, // X coordinate in pixels
-	y:          f64 `json:"y"`, // Y coordinate in pixels
-	width:      f64 `json:"width"`, // Width in pixels, ignored if using a gid
-	height:     f64 `json:"height"`, // Height in pixels, ignored if using a gid
+	x:          f32 `json:"x"`, // X coordinate in pixels
+	y:          f32 `json:"y"`, // Y coordinate in pixels
+	width:      f32 `json:"width"`, // Width in pixels, ignored if using a gid
+	height:     f32 `json:"height"`, // Height in pixels, ignored if using a gid
 	visible:    bool `json:"visible"`, // Whether object is shown in editor
 	ellipse:    bool `json:"ellipse"`, // Used to mark an object as an ellipse
+	capsule:    bool `json:"ellipse"`, // Used to mark an object as an capsule
 	point:      bool `json:"point"`, // Used to mark an object as a point
 	polygon:    []Coordinate `json:"polygon"`, // A list of x,y coordinates in pixels
 	polyline:   []Coordinate `json:"polyline"`, // A list of x,y coordinates in pixels
 	properties: []Property `json:"properties"`, // A list of properties (name, value, type)
-	rotation:   f64 `json:"rotation"`, // Angle in degrees clockwise
+	rotation:   f32 `json:"rotation"`, // Angle in degrees clockwise
 	template:   string `json:"template"`, // Reference to a template file, in case object is a template instance
 	text:       map[string]i32 `json:"text"`, // String key-value pairs
 }
