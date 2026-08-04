@@ -6,6 +6,7 @@ import "myvendor:tiled"
 import "core:mem"
 import "core:fmt"
 import "core:math/linalg"
+import "core:math"
 
 ZOOM :: 4
 SCREEN_WIDTH :: 240
@@ -31,16 +32,55 @@ Direction :: enum { East, West, North, South }
 
 Player :: struct {
 	pos: Vec2,
+	size: Vec2,
 	textures_idle: k2.Texture,
+	textures_walk: k2.Texture,
 	dir: Direction,
 	speed: f32,
+	is_moving: bool,
+	animation_dt_idle: f32,
+	animation_dt_walk: f32,
 }
 player_load_textures :: proc(player: ^Player) {
 	player.textures_idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png"))
+	player.textures_walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png"))
 }
 player_draw :: proc(player: Player) {
-	src_rect := k2.Rect{0,0,16,16}
-	k2.draw_texture_rect(player.textures_idle, src_rect, player.pos - {0,16})
+	player_pos := player.pos - {0,16}
+	if player.is_moving {
+		src_rect: k2.Rect
+		switch player.dir {
+		case .East: src_rect = {0,0,16,16}
+		case .West: src_rect = {0,0,-16,16}
+		case .North: src_rect = {0,16,16,16}
+		case .South: src_rect = {0,32,16,16}
+		}
+		// +1 because first walk frame is the same as idle frame,
+		// hero moves but no animation starts playing
+		src_rect.x = f32(int(player.animation_dt_walk*player.speed/8 + 1) % 4) * TILE_WIDTH
+		k2.draw_texture_rect(player.textures_walk, src_rect, player_pos)
+	} else {
+		src_rect: k2.Rect
+		switch player.dir {
+		case .East: src_rect = {0,0,16,16}
+		case .West: src_rect = {0,0,-16,16}
+		case .North: src_rect = {0,16,16,16}
+		case .South: src_rect = {0,32,16,16}
+		}
+
+		// Play animation only sometimes.
+		if int(player.animation_dt_idle) % 7 == 5 {
+			// Truncate the whole part of `animation_dt_idle` so that
+			// animation always starts at the first frame.
+			src_rect.x = f32(int((player.animation_dt_idle - math.trunc(player.animation_dt_idle))*6) % 5) * TILE_WIDTH
+			k2.draw_texture_rect(player.textures_idle, src_rect, player_pos)
+		} else {
+			k2.draw_texture_rect(player.textures_idle, src_rect, player_pos)
+		}
+	}
+}
+player_draw_debug_info :: proc(player: Player) {
+	k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
 }
 
 Room :: struct {
@@ -70,6 +110,8 @@ process_input :: proc() {
 	}
 
 	movement = linalg.normalize0(movement)
+
+	w.player.is_moving = movement.x != 0 || movement.y != 0
 
 	if movement.x > 0 {
 		w.player.dir = .East
@@ -119,6 +161,7 @@ init :: proc() {
 	load_current_room(w.maps[w.current_map_idx])
 	player_load_textures(&w.player)
 	w.player.speed = 50
+	w.player.size = {16,16}
 }
 
 step :: proc() -> bool {
@@ -127,6 +170,14 @@ step :: proc() -> bool {
 
 	if !k2.update() {
 		return false
+	}
+
+	if w.player.is_moving {
+		w.player.animation_dt_idle = 0
+		w.player.animation_dt_walk += k2.get_frame_time()
+	} else {
+		w.player.animation_dt_idle += k2.get_frame_time()
+		w.player.animation_dt_walk = 0
 	}
 
 	process_input()
@@ -146,6 +197,7 @@ step :: proc() -> bool {
 	k2.clear(BG_COLOR)
 	draw_map(w.maps[w.current_map_idx])
 	player_draw(w.player)
+	player_draw_debug_info(w.player)
 	k2.present()
 
 	return true
