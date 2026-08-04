@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2024 SabeDoesThings.
+ * Copyright (c) 2026 Dmitry Matveyev.
  * SPDX-License-Identifier: MIT
  */
-
 package tiled
 
-import json "core:encoding/json"
-import fmt "core:fmt"
+import "core:encoding/json"
+import "core:fmt"
 
 // This file includes optional helper procedures for parsing Tiled map data. This file was not included in the original tiled package.
 

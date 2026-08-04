@@ -7,7 +7,6 @@ import "core:mem"
 import "core:fmt"
 import "core:math/linalg"
 import "core:math"
-import vmem "core:mem/virtual"
 
 ZOOM :: 4
 SCREEN_WIDTH :: 240
@@ -24,7 +23,7 @@ Vec2 :: k2.Vec2
 logger: log.Logger
 
 World :: struct {
-	arena: vmem.Arena,
+	arena: mem.Arena,
 	arena_allocator: mem.Allocator,
 	maps: [1]tiled.Map,
 	current_map_idx: int,
@@ -39,11 +38,11 @@ World :: struct {
 }
 w: World
 world_init :: proc(world: ^World) {
-	arena: vmem.Arena
-	arena_err := vmem.arena_init_growing(&arena)
-	log.ensuref(arena_err == nil, "Virtual Arena init failed")
+	arena_buffer := make([]byte, 12000)
+	arena: mem.Arena
+	mem.arena_init(&arena, arena_buffer[:])
 	world.arena = arena
-	world.arena_allocator = vmem.arena_allocator(&world.arena)
+	world.arena_allocator = mem.arena_allocator(&world.arena)
 }
 world_destroy :: proc(world: ^World) {
 	free_all(world.arena_allocator)
