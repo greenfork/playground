@@ -17,6 +17,7 @@ debug_animations := false
 debug_drawing_queue := false
 debug_collisions := false
 debug_interactions := false
+debug_with_mouse := true
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -178,6 +179,9 @@ interactables_draw :: proc(interactables: []Interactable) {
 interactable_point :: proc(interactable: Interactable) -> Vec2 {
 	return interactable.pos + {TILE_WIDTH/2, -TILE_HEIGHT/2}
 }
+interactable_rect :: proc(i: Interactable) -> Rect {
+	return Rect{i.pos.x, i.pos.y-TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT}
+}
 interactables_draw_debug_info :: proc(interactables: []Interactable, player: Player) {
 	if debug_interactions {
 		for interactable in interactables {
@@ -289,6 +293,19 @@ process_input :: proc() {
 			interactable_act(w.player.active_interactable)
 		}
 	}
+
+	if debug_with_mouse && k2.mouse_button_went_down(.Left) {
+		screen_pos := k2.get_mouse_position()
+		world_pos := k2.screen_to_world(screen_pos, w.game_camera)
+		if k2.point_in_rect(world_pos, player_rect(w.player)) {
+			log.debugf("Clicked on player: %v", w.player)
+		}
+		for i in w.room.interactables {
+			if k2.point_in_rect(world_pos, interactable_rect(i)) {
+				log.debugf("Clicked on interactable: %v", i)
+			}
+		}
+	}
 }
 
 main :: proc() {
@@ -324,6 +341,7 @@ init :: proc() {
 	load_current_room(w.maps[w.current_map_idx])
 	w.player.speed = 50
 	w.player.size = {16,16}
+	if debug_with_mouse { k2.set_cursor_visible(true) }
 }
 
 step :: proc() -> bool {
