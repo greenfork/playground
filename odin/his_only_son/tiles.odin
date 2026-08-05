@@ -85,6 +85,10 @@ load_current_room :: proc(m: tiled.Map) {
 			if append(&w.room.interactables, interactable) == 0 {
 				log.errorf("Failed to push to interactables: %v", interactable)
 			}
+			collider := Collider{rect=k2.Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
+			if append(&w.room.colliders, collider) == 0 {
+				log.errorf("Failed to push to collider: %v", collider)
+			}
 		}
 	}
 
