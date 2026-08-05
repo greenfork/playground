@@ -41,7 +41,7 @@ draw_map :: proc(m: tiled.Map) {
 		tile_x := (global_tile_id - tileset.first_gid) % tileset.columns
 		tile_y := (global_tile_id - tileset.first_gid) / tileset.columns
 
-		src_rect := k2.Rect{
+		src_rect := Rect{
 			x = f32(tile_x * tileset.tile_width),
 			y = f32(tile_y * tileset.tile_height),
 			w = f32(tileset.tile_width),
@@ -85,7 +85,7 @@ load_current_room :: proc(m: tiled.Map) {
 			if append(&w.room.interactables, interactable) == 0 {
 				log.errorf("Failed to push to interactables: %v", interactable)
 			}
-			collider := Collider{rect=k2.Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
+			collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
 			if append(&w.room.colliders, collider) == 0 {
 				log.errorf("Failed to push to collider: %v", collider)
 			}
@@ -93,7 +93,7 @@ load_current_room :: proc(m: tiled.Map) {
 	}
 
 	load_collider :: proc(object: tiled.Object) {
-		collider := Collider{rect=k2.Rect{object.x, object.y,
+		collider := Collider{rect=Rect{object.x, object.y,
 			object.width, object.height}}
 		if append(&w.room.colliders, collider) == 0 {
 			log.errorf("Failed to push to colliders: %v", collider)

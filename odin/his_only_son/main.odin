@@ -16,10 +16,12 @@ debug_positions := false
 debug_anim := false
 debug_drawing_queue := false
 debug_collisions := false
+debug_interactions := false
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
 Vec2 :: k2.Vec2
+Rect :: k2.Rect
 
 logger: log.Logger
 
@@ -33,7 +35,7 @@ World :: struct {
 	tile_textures: [1]k2.Texture,
 	textures: [Texture_Kind]k2.Texture,
 	game_camera: k2.Camera,
-	game_camera_world_rect: k2.Rect,
+	game_camera_world_rect: Rect,
 	ui_camera: k2.Camera,
 	player: Player,
 	room: Room,
@@ -63,11 +65,12 @@ Player :: struct {
 	is_moving: bool,
 	animation_dt_idle: f32,
 	animation_dt_walk: f32,
+	active_interactable: Maybe(Interactable),
 }
 player_draw :: proc(player: Player) {
 	player_pos := player.pos - {0,16}
 	if player.is_moving {
-		src_rect: k2.Rect
+		src_rect: Rect
 		switch player.dir {
 		case .East: src_rect = {0,0,16,16}
 		case .West: src_rect = {0,0,-16,16}
@@ -79,7 +82,7 @@ player_draw :: proc(player: Player) {
 		src_rect.x = f32(int(player.animation_dt_walk*player.speed/8 + 1) % 4) * TILE_WIDTH
 		drawing_queue_add({&w.textures[.Player_Walk], src_rect, player_pos})
 	} else {
-		src_rect: k2.Rect
+		src_rect: Rect
 		switch player.dir {
 		case .East: src_rect = {0,0,16,16}
 		case .West: src_rect = {0,0,-16,16}
@@ -96,11 +99,14 @@ player_draw :: proc(player: Player) {
 		drawing_queue_add({&w.textures[.Player_Idle], src_rect, player_pos})
 	}
 }
-player_rect :: proc(player: Player) -> k2.Rect {
+player_rect :: proc(player: Player) -> Rect {
 	return k2.rect_from_pos_size(player.pos - {0,player.size.y}, player.size)
 }
-player_collision_rect :: proc(player: Player) -> k2.Rect {
+player_collision_rect :: proc(player: Player) -> Rect {
 	return k2.rect_from_pos_size(player.pos + {3,-player.size.y/2}, {player.size.x-6, player.size.y/2})
+}
+player_point :: proc(player: Player) -> Vec2 {
+	return player.pos + {player.size.x/2, -player.size.y/2 + 3}
 }
 player_draw_debug_info :: proc(player: Player) {
 	if debug_anim {
@@ -112,6 +118,31 @@ player_draw_debug_info :: proc(player: Player) {
 	if debug_collisions {
 		k2.draw_rect_outline(player_collision_rect(player), 0.5, k2.MAGENTA)
 	}
+	if debug_interactions {
+		k2.draw_circle(player_point(player), 1, k2.YELLOW)
+	}
+}
+player_set_active_interactable :: proc(player: ^Player, interactables: []Interactable) {
+	if len(interactables) == 0 {
+		player.active_interactable = nil
+		return
+	}
+	closest_active_interactable := interactables[0]
+	pp := player_point(player^)
+	closest_distance := linalg.length(interactable_point(closest_active_interactable) - pp)
+	for interactable in interactables {
+		new_distance := linalg.length(interactable_point(interactable) - pp)
+		if new_distance < closest_distance {
+			closest_active_interactable = interactable
+			closest_distance = new_distance
+		}
+	}
+
+	if closest_distance < INTERACTABLE_REACH_PIXELS {
+		player.active_interactable = closest_active_interactable
+	} else {
+		player.active_interactable = nil
+	}
 }
 
 Room :: struct {
@@ -119,13 +150,14 @@ Room :: struct {
 	colliders: [dynamic; 32]Collider,
 }
 
+INTERACTABLE_REACH_PIXELS :: 13
 Interactable :: struct {
 	kind: Interactable_Kind,
 	pos: Vec2,
 }
 Interactable_Kind :: enum { Chest }
 interactables_draw :: proc(interactables: []Interactable) {
-	src_rect := k2.Rect{0,0,TILE_WIDTH,TILE_HEIGHT}
+	src_rect := Rect{0,0,TILE_WIDTH,TILE_HEIGHT}
 	skew := Vec2{0,-TILE_HEIGHT}
 	for interactable in interactables {
 		switch interactable.kind {
@@ -133,9 +165,26 @@ interactables_draw :: proc(interactables: []Interactable) {
 		}
 	}
 }
+interactable_point :: proc(interactable: Interactable) -> Vec2 {
+	return interactable.pos + {TILE_WIDTH/2, -TILE_HEIGHT/2}
+}
+interactables_draw_debug_info :: proc(interactables: []Interactable, player: Player) {
+	if debug_interactions {
+		for interactable in interactables {
+			k2.draw_circle(interactable_point(interactable), 1, k2.LIGHT_YELLOW)
+		}
+
+		if active_interactable, ok := player.active_interactable.?; ok {
+			k2.draw_circle(interactable_point(active_interactable), 1, k2.ORANGE)
+		}
+	}
+}
+interactable_act :: proc(interactable: Interactable) {
+	log.info("Act!")
+}
 
 Collider :: struct {
-	rect: k2.Rect,
+	rect: Rect,
 }
 colliders_draw_debug_info :: proc(colliders: []Collider) {
 	if debug_collisions {
@@ -178,7 +227,7 @@ process_input :: proc() {
 	dt := k2.get_frame_time()
 	to_move := movement * dt * w.player.speed
 
-	prect: k2.Rect
+	prect: Rect
 	w.player.pos.x += to_move.x
 	prect = player_collision_rect(w.player)
 	for collider in w.room.colliders {
@@ -197,6 +246,12 @@ process_input :: proc() {
 			sign: f32 = to_move.y >= 0 ? -1 : +1
 			fix := overlap.h * sign
 			w.player.pos.y += fix
+		}
+	}
+
+	if k2.key_went_down(.Space) {
+		if active_interactable, ok := w.player.active_interactable.?; ok {
+			interactable_act(active_interactable)
 		}
 	}
 }
@@ -253,6 +308,7 @@ step :: proc() -> bool {
 	}
 
 	process_input()
+	player_set_active_interactable(&w.player, w.room.interactables[:])
 
 	{
 		w.game_camera = {
@@ -263,7 +319,7 @@ step :: proc() -> bool {
 		game_camera_world_matrix := k2.camera_world_matrix(w.game_camera)
 		top_left := (game_camera_world_matrix * k2.Vec4{0,0,0,1}).xy
 		bottom_right := (game_camera_world_matrix * k2.Vec4{SCREEN_WIDTH*w.game_camera.zoom, SCREEN_HEIGHT*w.game_camera.zoom, 0, 1}).xy
-		w.game_camera_world_rect = k2.Rect{
+		w.game_camera_world_rect = Rect{
 			top_left.x, top_left.y,
 			bottom_right.x - top_left.x,
 			bottom_right.y - top_left.y,
@@ -273,7 +329,7 @@ step :: proc() -> bool {
 	w.ui_camera = {
 		zoom = f32(k2.get_screen_height()) / SCREEN_HEIGHT,
 	}
-	k2.set_scissor_rect(k2.Rect{
+	k2.set_scissor_rect(Rect{
 		0, 0,
 		SCREEN_WIDTH*w.game_camera.zoom,
 		SCREEN_HEIGHT*w.game_camera.zoom,
@@ -288,6 +344,7 @@ step :: proc() -> bool {
 
 	colliders_draw_debug_info(w.room.colliders[:])
 	player_draw_debug_info(w.player)
+	interactables_draw_debug_info(w.room.interactables[:], w.player)
 
 	k2.set_camera(w.ui_camera)
 	drawing_queue_draw_debug_info(w.drawing_queue)

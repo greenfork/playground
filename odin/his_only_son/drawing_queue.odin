@@ -10,7 +10,7 @@ Drawing_Queue :: struct {
 }
 drawing_queue_add :: proc(item: Drawing_Item, cull := true) -> bool {
 	if cull {
-		dst_rect := k2.Rect{item.position.x, item.position.y,
+		dst_rect := Rect{item.position.x, item.position.y,
 			item.source_rect.w, item.source_rect.h}
 		if !k2.rect_overlapping(dst_rect, w.game_camera_world_rect) {
 			return false
@@ -44,7 +44,7 @@ drawing_queue_draw_debug_info :: proc(q: Drawing_Queue) {
 
 Drawing_Item :: struct {
 	texture: ^k2.Texture,
-	source_rect: k2.Rect,
+	source_rect: Rect,
 	position: Vec2,
 }
 drawing_item_draw :: proc(item: Drawing_Item) {
