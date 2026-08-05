@@ -81,13 +81,17 @@ load_current_room :: proc(m: tiled.Map) {
 		case "hero":
 			w.player.pos = {f32(object.x), f32(object.y)}
 		case "chest":
-			interactable := Interactable{kind=.Chest, pos={f32(object.x), f32(object.y)}}
-			if append(&w.room.interactables, interactable) == 0 {
-				log.errorf("Failed to push to interactables: %v", interactable)
-			}
-			collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
-			if append(&w.room.colliders, collider) == 0 {
-				log.errorf("Failed to push to collider: %v", collider)
+			switch object.type {
+			case "golden_crystals_chest":
+				interactable := Interactable{kind=.GoldenCrystalsChest, pos={f32(object.x), f32(object.y)},
+					animation_frame_max=2, animation_speed=10}
+				if append(&w.room.interactables, interactable) == 0 {
+					log.errorf("Failed to push to interactables: %v", interactable)
+				}
+				collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
+				if append(&w.room.colliders, collider) == 0 {
+					log.errorf("Failed to push to collider: %v", collider)
+				}
 			}
 		}
 	}

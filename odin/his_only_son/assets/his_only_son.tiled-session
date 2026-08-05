@@ -3,6 +3,9 @@
     "expandedProjectPaths": [
     ],
     "fileStates": {
+        "Tiled/Tileset.tsx": {
+            "scaleInEditor": 1
+        }
     },
     "last.exportedFilePath": "/home/king/playground/odin/his_only_son/assets/Tiled",
     "last.imagePath": "/home/king/playground/odin/his_only_son/assets/TinyTerrors",
@@ -16,8 +19,9 @@
     "openFiles": [
     ],
     "project": "his_only_son.tiled-project",
-    "property.type": "string",
+    "property.type": "int",
     "recentFiles": [
+        "Tiled/Tileset.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

@@ -13,7 +13,7 @@ SCREEN_WIDTH :: 240
 SCREEN_HEIGHT :: 180
 
 debug_positions := false
-debug_anim := false
+debug_animations := false
 debug_drawing_queue := false
 debug_collisions := false
 debug_interactions := false
@@ -65,7 +65,7 @@ Player :: struct {
 	is_moving: bool,
 	animation_dt_idle: f32,
 	animation_dt_walk: f32,
-	active_interactable: Maybe(Interactable),
+	active_interactable: ^Interactable,
 }
 player_draw :: proc(player: Player) {
 	player_pos := player.pos - {0,16}
@@ -109,7 +109,7 @@ player_point :: proc(player: Player) -> Vec2 {
 	return player.pos + {player.size.x/2, -player.size.y/2 + 3}
 }
 player_draw_debug_info :: proc(player: Player) {
-	if debug_anim {
+	if debug_animations {
 		k2.draw_text(fmt.tprintf("is_moving: %v\nanim_dt_walk: %v\nanim_dt_idle: %v", player.is_moving, player.animation_dt_walk, player.animation_dt_idle), player.pos + {0,-player.size.y - 16}, 4, k2.WHITE)
 	}
 	if debug_positions {
@@ -127,13 +127,13 @@ player_set_active_interactable :: proc(player: ^Player, interactables: []Interac
 		player.active_interactable = nil
 		return
 	}
-	closest_active_interactable := interactables[0]
+	closest_active_interactable := &interactables[0]
 	pp := player_point(player^)
-	closest_distance := linalg.length(interactable_point(closest_active_interactable) - pp)
-	for interactable in interactables {
+	closest_distance := linalg.length(interactable_point(closest_active_interactable^) - pp)
+	for &interactable in interactables {
 		new_distance := linalg.length(interactable_point(interactable) - pp)
 		if new_distance < closest_distance {
-			closest_active_interactable = interactable
+			closest_active_interactable = &interactable
 			closest_distance = new_distance
 		}
 	}
@@ -152,16 +152,26 @@ Room :: struct {
 
 INTERACTABLE_REACH_PIXELS :: 13
 Interactable :: struct {
-	kind: Interactable_Kind,
 	pos: Vec2,
+	animation_dt: f32,
+	animation_state: Animation_State,
+	animation_frame: int,
+	animation_frame_max: int,
+	animation_speed: f32,
+
+	kind: Interactable_Kind,
 }
-Interactable_Kind :: enum { Chest }
+Interactable_Kind :: enum { GoldenCrystalsChest }
+Animation_State :: enum { NotStarted, InProgress, Finished }
 interactables_draw :: proc(interactables: []Interactable) {
 	src_rect := Rect{0,0,TILE_WIDTH,TILE_HEIGHT}
 	skew := Vec2{0,-TILE_HEIGHT}
 	for interactable in interactables {
 		switch interactable.kind {
-		case .Chest: drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
+		case .GoldenCrystalsChest:
+			src_rect.y = TILE_HEIGHT
+			src_rect.x = TILE_WIDTH*f32(interactable.animation_frame)
+			drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
 		}
 	}
 }
@@ -174,13 +184,38 @@ interactables_draw_debug_info :: proc(interactables: []Interactable, player: Pla
 			k2.draw_circle(interactable_point(interactable), 1, k2.LIGHT_YELLOW)
 		}
 
-		if active_interactable, ok := player.active_interactable.?; ok {
-			k2.draw_circle(interactable_point(active_interactable), 1, k2.ORANGE)
+		if player.active_interactable != nil {
+			k2.draw_circle(interactable_point(player.active_interactable^), 1, k2.ORANGE)
 		}
 	}
 }
-interactable_act :: proc(interactable: Interactable) {
-	log.info("Act!")
+interactable_act :: proc(i: ^Interactable) {
+	switch i.kind {
+	case .GoldenCrystalsChest:
+		if i.animation_state == .NotStarted { i.animation_state = .InProgress }
+	}
+	if debug_interactions {
+		log.debugf("interactable acted: %v", i)
+	}
+}
+interactables_animate :: proc(interactables: []Interactable) {
+	for &i in interactables {
+		switch i.animation_state {
+		case .NotStarted:
+		case .Finished:
+		case .InProgress:
+			if debug_animations {
+				log.debugf("interactable animates -- dt: %v, frame: %v, frame_max: %v", i.animation_dt, i.animation_frame, i.animation_frame_max)
+			}
+			i.animation_dt += k2.get_frame_time()
+			i.animation_frame = int(i.animation_dt * i.animation_speed)
+			if i.animation_frame >= i.animation_frame_max {
+				i.animation_state = .Finished
+				i.animation_frame = i.animation_frame_max
+				if debug_animations { log.debug("Animation finished") }
+			}
+		}
+	}
 }
 
 Collider :: struct {
@@ -250,8 +285,8 @@ process_input :: proc() {
 	}
 
 	if k2.key_went_down(.Space) {
-		if active_interactable, ok := w.player.active_interactable.?; ok {
-			interactable_act(active_interactable)
+		if w.player.active_interactable != nil {
+			interactable_act(w.player.active_interactable)
 		}
 	}
 }
@@ -283,7 +318,7 @@ init :: proc() {
 	context.logger = logger
 	world_init(&w)
 
-	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed})
+	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed_Resizable})
 	load_textures()
 	load_maps()
 	load_current_room(w.maps[w.current_map_idx])
@@ -306,6 +341,7 @@ step :: proc() -> bool {
 		w.player.animation_dt_idle += k2.get_frame_time()
 		w.player.animation_dt_walk = 0
 	}
+	interactables_animate(w.room.interactables[:])
 
 	process_input()
 	player_set_active_interactable(&w.player, w.room.interactables[:])

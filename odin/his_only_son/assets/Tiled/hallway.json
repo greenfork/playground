@@ -168,19 +168,6 @@
          "name":"interactables",
          "objects":[
                 {
-                 "gid":70,
-                 "height":16,
-                 "id":1,
-                 "name":"chest",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":16,
-                 "x":592,
-                 "y":64
-                }, 
-                {
                  "gid":79,
                  "height":16,
                  "id":4,
@@ -191,6 +178,19 @@
                  "visible":true,
                  "width":16,
                  "x":560,
+                 "y":64
+                }, 
+                {
+                 "gid":70,
+                 "height":16,
+                 "id":21,
+                 "name":"chest",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"golden_crystals_chest",
+                 "visible":true,
+                 "width":16,
+                 "x":592,
                  "y":64
                 }],
          "opacity":1,
@@ -205,52 +205,52 @@
          "name":"colliders",
          "objects":[
                 {
-                 "height":94.9892407008915,
+                 "height":94.9892,
                  "id":16,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":31.0482631417153,
-                 "x":-15.6778358438365,
-                 "y":4.91853673532124
+                 "width":31.0483,
+                 "x":-15.6778,
+                 "y":4.91854
                 }, 
                 {
-                 "height":18.4735051045212,
+                 "height":18.4735,
                  "id":17,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":608.714928247968,
-                 "x":15.4486036838978,
-                 "y":79.4036622913628
+                 "width":608.715,
+                 "x":15.4486,
+                 "y":79.4037
                 }, 
                 {
-                 "height":92.1980466835099,
+                 "height":92.198,
                  "id":18,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":19.6085825257362,
-                 "x":623.703759568611,
-                 "y":6.97613032165617
+                 "width":19.6086,
+                 "x":623.704,
+                 "y":6.97613
                 }, 
                 {
-                 "height":25.8305365964026,
+                 "height":25.8305,
                  "id":20,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":620.196648501688,
-                 "x":3.50711106692358,
-                 "y":6.97613032165617
+                 "width":620.197,
+                 "x":3.50711,
+                 "y":6.97613
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -259,7 +259,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":21,
+ "nextobjectid":22,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -289,6 +289,29 @@
          "spacing":0,
          "tilecount":12,
          "tileheight":16,
+         "tiles":[
+                {
+                 "id":0,
+                 "type":"golden_empty_chest"
+                }, 
+                {
+                 "id":3,
+                 "properties":[
+                        {
+                         "name":"reward_points",
+                         "type":"int",
+                         "value":0
+                        }],
+                 "type":"golden_crystals_chest"
+                }, 
+                {
+                 "id":6,
+                 "type":"wooden_gold_chest"
+                }, 
+                {
+                 "id":9,
+                 "type":"wooden_crystals_chest"
+                }],
          "tilewidth":16
         }, 
         {
