@@ -97,7 +97,10 @@ player_draw :: proc(player: Player) {
 	}
 }
 player_rect :: proc(player: Player) -> k2.Rect {
-	return k2.rect_from_pos_size(player.pos - {0,16}, player.size)
+	return k2.rect_from_pos_size(player.pos - {0,player.size.y}, player.size)
+}
+player_collision_rect :: proc(player: Player) -> k2.Rect {
+	return k2.rect_from_pos_size(player.pos + {3,-player.size.y/2}, {player.size.x-6, player.size.y/2})
 }
 player_draw_debug_info :: proc(player: Player) {
 	if debug_anim {
@@ -107,7 +110,7 @@ player_draw_debug_info :: proc(player: Player) {
 		k2.draw_text(fmt.tprintf("pos: (%v,  %v)", player.pos.x, player.pos.y), player.pos + {0,-player.size.y-8}, 4, k2.WHITE)
 	}
 	if debug_collisions {
-		k2.draw_rect_outline(player_rect(player), 1, k2.MAGENTA)
+		k2.draw_rect_outline(player_collision_rect(player), 0.5, k2.MAGENTA)
 	}
 }
 
@@ -175,30 +178,25 @@ process_input :: proc() {
 	dt := k2.get_frame_time()
 	to_move := movement * dt * w.player.speed
 
-	// When numbers match exactly, overlapping may or may not happen.
-	COLLISION_CORRECTION :: 0.001
-
 	prect: k2.Rect
 	w.player.pos.x += to_move.x
-	prect = player_rect(w.player)
+	prect = player_collision_rect(w.player)
 	for collider in w.room.colliders {
-		if k2.rect_overlapping(prect, collider.rect) {
-			if to_move.x >= 0 {
-				w.player.pos.x = collider.rect.x - prect.w - COLLISION_CORRECTION
-			} else {
-				w.player.pos.x = collider.rect.x + collider.rect.w + COLLISION_CORRECTION
-			}
+		overlap, overlapping := k2.rect_overlap(prect, collider.rect)
+		if overlapping && overlap.w != 0 {
+			sign: f32 = to_move.x >= 0 ? -1 : +1
+			fix := overlap.w * sign
+			w.player.pos.x += fix
 		}
 	}
 	w.player.pos.y += to_move.y
-	prect = player_rect(w.player)
+	prect = player_collision_rect(w.player)
 	for collider in w.room.colliders {
-		if k2.rect_overlapping(prect, collider.rect) {
-			if to_move.y >= 0 {
-				w.player.pos.y = collider.rect.y - COLLISION_CORRECTION
-			} else {
-				w.player.pos.y = collider.rect.y + collider.rect.h + prect.h + COLLISION_CORRECTION
-			}
+		overlap, overlapping := k2.rect_overlap(prect, collider.rect)
+		if overlapping && overlap.h != 0 {
+			sign: f32 = to_move.y >= 0 ? -1 : +1
+			fix := overlap.h * sign
+			w.player.pos.y += fix
 		}
 	}
 }
