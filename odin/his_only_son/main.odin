@@ -18,6 +18,7 @@ debug_drawing_queue := false
 debug_collisions := false
 debug_interactions := false
 debug_with_mouse := true
+debug_audio := false
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -30,6 +31,8 @@ World :: struct {
 	arena: mem.Arena,
 	arena_allocator: mem.Allocator,
 	arena_buffer: []byte,
+
+	audio: Audio,
 
 	maps: [1]tiled.Map,
 	current_map_idx: int,
@@ -294,6 +297,16 @@ process_input :: proc() {
 		}
 	}
 
+	if k2.key_went_down(.M) {
+		if w.audio.playing {
+			if debug_audio { log.debug("Pausing audio") }
+			audio_pause()
+		} else {
+			if debug_audio { log.debug("Playing audio") }
+			audio_play()
+		}
+	}
+
 	if debug_with_mouse && k2.mouse_button_went_down(.Left) {
 		screen_pos := k2.get_mouse_position()
 		world_pos := k2.screen_to_world(screen_pos, w.game_camera)
@@ -342,6 +355,7 @@ init :: proc() {
 	w.player.speed = 50
 	w.player.size = {16,16}
 	if debug_with_mouse { k2.set_cursor_visible(true) }
+	audio_load()
 }
 
 step :: proc() -> bool {
@@ -351,6 +365,11 @@ step :: proc() -> bool {
 	if !k2.update() {
 		return false
 	}
+	if !w.audio.first_time_inited {
+//		audio_play()
+		w.audio.first_time_inited = true
+	}
+	audio_update()
 
 	if w.player.is_moving {
 		w.player.animation_dt_idle = 0
@@ -411,6 +430,7 @@ shutdown :: proc() {
 	context.logger = logger
 
 	unload_textures()
+	audio_destroy()
 	k2.shutdown()
 	log.destroy_console_logger(logger)
 	world_destroy(&w)
