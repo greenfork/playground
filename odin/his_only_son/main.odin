@@ -70,6 +70,8 @@ Player :: struct {
 	animation_dt_idle: f32,
 	animation_dt_walk: f32,
 	active_interactable: ^Interactable,
+
+	gold: int,
 }
 player_draw :: proc(player: Player) {
 	player_pos := player.pos - {0,16}
@@ -168,6 +170,7 @@ Interactable :: struct {
 Chest :: struct {
 	state: enum { Closed, Open },
 	kind: enum { Golden_Crystals },
+	gold_amount: int,
 }
 Animation_State :: enum { Not_Started, In_Progress, Finished }
 interactables_draw :: proc(interactables: []Interactable) {
@@ -208,6 +211,7 @@ interactable_act :: proc(i: ^Interactable) {
 			var.state = .Open
 			sound_play(.Chest_Open)
 			if i.animation_state == .Not_Started { i.animation_state = .In_Progress }
+			w.player.gold += var.gold_amount
 		}
 	}
 	if debug_interactions {
@@ -243,6 +247,10 @@ colliders_draw_debug_info :: proc(colliders: []Collider) {
 			k2.draw_rect_outline(collider.rect, 0.5, k2.PURPLE)
 		}
 	}
+}
+
+draw_ui :: proc() {
+	k2.draw_text(fmt.tprintf("Gold: %d", w.player.gold), {5, 165}, 8, k2.YELLOW)
 }
 
 process_input :: proc() {
@@ -429,6 +437,7 @@ step :: proc() -> bool {
 	interactables_draw_debug_info(w.room.interactables[:], w.player)
 
 	k2.set_camera(w.ui_camera)
+	draw_ui()
 	drawing_queue_draw_debug_info(w.drawing_queue)
 	k2.present()
 
