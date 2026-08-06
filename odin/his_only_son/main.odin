@@ -163,17 +163,22 @@ Interactable :: struct {
 	animation_frame_max: int,
 	animation_speed: f32,
 
-	kind: Interactable_Kind,
+	variant: union { Chest },
 }
-Interactable_Kind :: enum { GoldenCrystalsChest }
-Animation_State :: enum { NotStarted, InProgress, Finished }
+Chest :: struct {
+	state: enum { Closed, Open },
+	kind: enum { Golden_Crystals },
+}
+Animation_State :: enum { Not_Started, In_Progress, Finished }
 interactables_draw :: proc(interactables: []Interactable) {
 	src_rect := Rect{0,0,TILE_WIDTH,TILE_HEIGHT}
 	skew := Vec2{0,-TILE_HEIGHT}
 	for interactable in interactables {
-		switch interactable.kind {
-		case .GoldenCrystalsChest:
-			src_rect.y = TILE_HEIGHT
+		switch var in interactable.variant {
+		case Chest:
+			switch var.kind {
+			case .Golden_Crystals: src_rect.y = TILE_HEIGHT
+			}
 			src_rect.x = TILE_WIDTH*f32(interactable.animation_frame)
 			drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
 		}
@@ -197,9 +202,13 @@ interactables_draw_debug_info :: proc(interactables: []Interactable, player: Pla
 	}
 }
 interactable_act :: proc(i: ^Interactable) {
-	switch i.kind {
-	case .GoldenCrystalsChest:
-		if i.animation_state == .NotStarted { i.animation_state = .InProgress }
+	switch &var in i.variant {
+	case Chest:
+		if var.state == .Closed {
+			var.state = .Open
+			sound_play(.Chest_Open)
+			if i.animation_state == .Not_Started { i.animation_state = .In_Progress }
+		}
 	}
 	if debug_interactions {
 		log.debugf("interactable acted: %v", i)
@@ -208,9 +217,9 @@ interactable_act :: proc(i: ^Interactable) {
 interactables_animate :: proc(interactables: []Interactable) {
 	for &i in interactables {
 		switch i.animation_state {
-		case .NotStarted:
+		case .Not_Started:
 		case .Finished:
-		case .InProgress:
+		case .In_Progress:
 			if debug_animations {
 				log.debugf("interactable animates -- dt: %v, frame: %v, frame_max: %v", i.animation_dt, i.animation_frame, i.animation_frame_max)
 			}

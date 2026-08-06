@@ -83,7 +83,7 @@ load_current_room :: proc(m: tiled.Map) {
 		case "chest":
 			switch object.type {
 			case "golden_crystals_chest":
-				interactable := Interactable{kind=.GoldenCrystalsChest, pos={f32(object.x), f32(object.y)},
+				interactable := Interactable{variant=Chest{}, pos={f32(object.x), f32(object.y)},
 					animation_frame_max=2, animation_speed=10}
 				if append(&w.room.interactables, interactable) == 0 {
 					log.errorf("Failed to push to interactables: %v", interactable)
