@@ -7,6 +7,8 @@ import "core:log"
 TILE_WIDTH :: 16
 TILE_HEIGHT :: 16
 
+Texture_Kind :: enum { Chest, Player_Idle, Player_Walk, Heart }
+
 load_textures :: proc() {
 	w.tile_textures = {
 		k2.load_texture_from_bytes(#load("assets/TinyTerrors/Tileset.png")),
@@ -15,6 +17,7 @@ load_textures :: proc() {
 		.Chest = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Chests.png")),
 		.Player_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png")),
 		.Player_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png")),
+		.Heart = k2.load_texture_from_bytes(#load("assets/mine/heart.png")),
 	}
 }
 unload_textures :: proc() {

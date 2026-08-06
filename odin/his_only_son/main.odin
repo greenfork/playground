@@ -58,7 +58,6 @@ world_destroy :: proc(world: ^World) {
 	delete(world.arena_buffer)
 }
 
-Texture_Kind :: enum { Chest, Player_Idle, Player_Walk }
 Direction :: enum { East, West, North, South }
 
 Player :: struct {
@@ -72,6 +71,7 @@ Player :: struct {
 	active_interactable: ^Interactable,
 
 	gold: int,
+	health: int,
 }
 player_draw :: proc(player: Player) {
 	player_pos := player.pos - {0,16}
@@ -251,6 +251,10 @@ colliders_draw_debug_info :: proc(colliders: []Collider) {
 
 draw_ui :: proc() {
 	k2.draw_text(fmt.tprintf("Gold: %d", w.player.gold), {5, 165}, 8, k2.YELLOW)
+	for heart_no in 1..<w.player.health+1 {
+		log.debugf("me: %v", SCREEN_WIDTH-64*f32(heart_no))
+		k2.draw_texture(w.textures[.Heart], {SCREEN_WIDTH-20*f32(heart_no),SCREEN_HEIGHT-20})
+	}
 }
 
 process_input :: proc() {
@@ -371,6 +375,7 @@ init :: proc() {
 	load_current_room(w.maps[w.current_map_idx])
 	w.player.speed = 50
 	w.player.size = {16,16}
+	w.player.health = 3
 	if debug_with_mouse { k2.set_cursor_visible(true) }
 	audio_load()
 }
