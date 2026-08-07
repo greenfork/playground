@@ -47,7 +47,7 @@ World :: struct {
 }
 w: World
 world_init :: proc(world: ^World) {
-	world.arena_buffer = make([]byte, 12000)
+	world.arena_buffer = make([]byte, 20000)
 	arena: mem.Arena
 	mem.arena_init(&arena, world.arena_buffer[:])
 	world.arena = arena
@@ -154,6 +154,12 @@ player_set_active_interactable :: proc(player: ^Player, interactables: []Interac
 Room :: struct {
 	interactables: [dynamic; 32]Interactable,
 	colliders: [dynamic; 32]Collider,
+	enemies: [dynamic; 32]Enemy,
+}
+room_debug_report :: proc(room: Room) {
+	for enemy in room.enemies {
+		log.debugf("Enemy: %v", enemy)
+	}
 }
 
 INTERACTABLE_REACH_PIXELS :: 13
@@ -248,11 +254,135 @@ colliders_draw_debug_info :: proc(colliders: []Collider) {
 		}
 	}
 }
+colliders_fix_position :: proc(colliders: []Collider, pos, to_move: Vec2, collision_rect: Rect) -> (fixed_position: Vec2, collided: bool) {
+	pos := pos
+	collision_rect := collision_rect
+
+	pos.x += to_move.x
+	collision_rect.x += to_move.x
+	for collider in colliders {
+		overlap, overlapping := k2.rect_overlap(collision_rect, collider.rect)
+		if overlapping && overlap.w != 0 {
+			sign: f32 = to_move.x >= 0 ? -1 : +1
+			fix := (overlap.w + 0.001) * sign
+			pos.x += fix
+			collision_rect.x += fix
+			collided = true
+		}
+	}
+
+	pos.y += to_move.y
+	collision_rect.y += to_move.y
+	for collider in colliders {
+		overlap, overlapping := k2.rect_overlap(collision_rect, collider.rect)
+		if overlapping && overlap.h != 0 {
+			sign: f32 = to_move.y >= 0 ? -1 : +1
+			fix := (overlap.h + 0.001) * sign
+			pos.y += fix
+			collision_rect.y += fix
+			collided = true
+		}
+	}
+	fixed_position = pos
+	return
+}
+
+Enemy_Animation :: struct {
+	idle_time: f32,
+	walk_time: f32,
+	speed: f32,
+	frame: int,
+	idle_frame_max: int,
+	walk_frame_max: int,
+}
+
+Enemy :: struct {
+	pos: Vec2,
+	velocity: Vec2,
+	attack_power: int,
+	script_fun: proc(self: ^Enemy, dt: f32),
+	is_moving: bool,
+	animation: Enemy_Animation,
+	dir: Direction,
+	collision_rect_fun: proc(self: Enemy) -> Rect,
+	existed_time: f32, // how much time the instance exists
+	no_actions_time: f32, // how much time there were no actions taken
+
+	variant: union{Slime},
+}
+Slime :: struct {
+	kind: Slime_Kind,
+}
+Slime_Kind :: enum{Green}
+slime_init_from_object :: proc(object: tiled.Object) -> Enemy {
+	kind: Slime_Kind
+	switch object.type {
+	case "green_slime": kind = .Green
+	}
+	collision_rect_fun :: proc(self: Enemy) -> Rect {
+		return Rect{self.pos.x+2, self.pos.y-TILE_HEIGHT+8, TILE_WIDTH-2, TILE_HEIGHT-8}
+	}
+	return Enemy{pos={f32(object.x), f32(object.y)}, attack_power=1,
+		variant=Slime{kind=kind}, script_fun=green_slime_script_fun,
+		animation={speed=6, idle_frame_max=4, walk_frame_max=8}, collision_rect_fun=collision_rect_fun,
+		velocity={0,-5}}
+}
+enemies_update :: proc(enemies: []Enemy, dt: f32) {
+	for &enemy in enemies {
+		if enemy.script_fun != nil {
+			enemy->script_fun(dt)
+		}
+	}
+}
+enemies_draw :: proc(enemies: []Enemy) {
+	skew := Vec2{0,-TILE_HEIGHT}
+	for enemy in enemies {
+		src_rect: Rect
+		tex: ^k2.Texture
+		switch var in enemy.variant {
+		case Slime:
+			switch var.kind {
+			case .Green:
+				if enemy.is_moving {
+					tex = &w.textures[.Green_Slime_Walk]
+				} else {
+					tex = &w.textures[.Green_Slime_Idle]
+				}
+			}
+		}
+		switch enemy.dir {
+		case .East: src_rect = {0,0,16,16}
+		case .West: src_rect = {0,0,-16,16}
+		case .North: src_rect = {0,16,16,16}
+		case .South: src_rect = {0,32,16,16}
+		}
+		frame_max := enemy.animation.walk_frame_max if enemy.is_moving else enemy.animation.idle_frame_max
+		if enemy.is_moving  {
+			src_rect.x = TILE_WIDTH * f32(int(enemy.animation.walk_time*enemy.animation.speed + 1) % frame_max)
+		} else {
+			if int(enemy.animation.idle_time) % 7 == 6 {
+				src_rect.x = f32(int((enemy.animation.idle_time - math.trunc(enemy.animation.idle_time))*6) % frame_max) * TILE_WIDTH
+			}
+		}
+		drawing_queue_add({tex, src_rect, enemy.pos+skew})
+	}
+}
+enemies_draw_debug_info :: proc(enemies: []Enemy) {
+	for enemy in enemies {
+		if debug_collisions {
+			k2.draw_rect_outline(enemy->collision_rect_fun(), 0.5, k2.PURPLE)
+		}
+		if debug_animations {
+			k2.draw_text(fmt.tprintf("is_moving: %v\nidle_time: %v\nwalk_time: %v",
+				enemy.is_moving, enemy.animation.idle_time,
+				enemy.animation.walk_time), enemy.pos + {0,-20}, 4, k2.WHITE)
+		}
+	}
+}
 
 draw_ui :: proc() {
 	k2.draw_text(fmt.tprintf("Gold: %d", w.player.gold), {5, 165}, 8, k2.YELLOW)
 	for heart_no in 1..<w.player.health+1 {
-		log.debugf("me: %v", SCREEN_WIDTH-64*f32(heart_no))
 		k2.draw_texture(w.textures[.Heart], {SCREEN_WIDTH-20*f32(heart_no),SCREEN_HEIGHT-20})
 	}
 }
@@ -289,28 +419,8 @@ process_input :: proc() {
 
 	dt := k2.get_frame_time()
 	to_move := movement * dt * w.player.speed
-
-	prect: Rect
-	w.player.pos.x += to_move.x
-	prect = player_collision_rect(w.player)
-	for collider in w.room.colliders {
-		overlap, overlapping := k2.rect_overlap(prect, collider.rect)
-		if overlapping && overlap.w != 0 {
-			sign: f32 = to_move.x >= 0 ? -1 : +1
-			fix := overlap.w * sign
-			w.player.pos.x += fix
-		}
-	}
-	w.player.pos.y += to_move.y
-	prect = player_collision_rect(w.player)
-	for collider in w.room.colliders {
-		overlap, overlapping := k2.rect_overlap(prect, collider.rect)
-		if overlapping && overlap.h != 0 {
-			sign: f32 = to_move.y >= 0 ? -1 : +1
-			fix := overlap.h * sign
-			w.player.pos.y += fix
-		}
-	}
+	fixed_position, collided := colliders_fix_position(w.room.colliders[:], w.player.pos, to_move, player_collision_rect(w.player))
+	w.player.pos = fixed_position
 
 	if k2.key_went_down(.Space) {
 		if w.player.active_interactable != nil {
@@ -339,6 +449,10 @@ process_input :: proc() {
 				log.debugf("Clicked on interactable: %v", i)
 			}
 		}
+	}
+
+	if k2.key_went_down(.X) {
+		room_debug_report(w.room)
 	}
 }
 
@@ -387,6 +501,9 @@ step :: proc() -> bool {
 	if !k2.update() {
 		return false
 	}
+
+	dt := k2.get_frame_time()
+
 	if !w.audio.first_time_inited {
 //		audio_play()
 		w.audio.first_time_inited = true
@@ -404,6 +521,7 @@ step :: proc() -> bool {
 
 	process_input()
 	player_set_active_interactable(&w.player, w.room.interactables[:])
+	enemies_update(w.room.enemies[:], dt)
 
 	{
 		w.game_camera = {
@@ -434,10 +552,12 @@ step :: proc() -> bool {
 	k2.clear(BG_COLOR)
 	draw_map(w.maps[w.current_map_idx])
 	interactables_draw(w.room.interactables[:])
+	enemies_draw(w.room.enemies[:])
 	player_draw(w.player)
 	drawing_queue_draw(&w.drawing_queue, w.game_camera)
 
 	colliders_draw_debug_info(w.room.colliders[:])
+	enemies_draw_debug_info(w.room.enemies[:])
 	player_draw_debug_info(w.player)
 	interactables_draw_debug_info(w.room.interactables[:], w.player)
 

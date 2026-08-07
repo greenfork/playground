@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="12" tilewidth="16" tileheight="16" infinite="1" nextlayerid="5" nextobjectid="22">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="12" tilewidth="16" tileheight="16" infinite="1" nextlayerid="6" nextobjectid="23">
  <editorsettings>
   <export target="hallway.json" format="json"/>
  </editorsettings>
  <tileset firstgid="1" source="Tileset.tsx"/>
  <tileset firstgid="67" source="Chests.tsx"/>
  <tileset firstgid="79" source="Character_Idle.tsx"/>
+ <tileset firstgid="94" source="SlimeGreen_Walk.tsx"/>
  <layer id="2" name="floor" width="15" height="12">
   <data encoding="csv">
    <chunk x="0" y="0" width="16" height="16">
@@ -126,10 +127,13 @@
   <object id="4" name="hero" gid="79" x="560" y="64" width="16" height="16"/>
   <object id="21" name="chest" type="golden_crystals_chest" gid="70" x="592" y="64" width="16" height="16"/>
  </objectgroup>
- <objectgroup id="4" name="colliders">
+ <objectgroup id="4" name="colliders" visible="0">
   <object id="16" x="-15.6778" y="4.91854" width="31.0483" height="94.9892"/>
   <object id="17" x="15.4486" y="79.4037" width="608.715" height="18.4735"/>
   <object id="18" x="623.704" y="6.97613" width="19.6086" height="92.198"/>
   <object id="20" x="3.50711" y="6.97613" width="620.197" height="25.8305"/>
+ </objectgroup>
+ <objectgroup id="5" name="enemies">
+  <object id="22" name="slime" type="green_slime" gid="94" x="479.425" y="73.2903" width="16" height="16"/>
  </objectgroup>
 </map>

@@ -7,7 +7,7 @@ import "core:log"
 TILE_WIDTH :: 16
 TILE_HEIGHT :: 16
 
-Texture_Kind :: enum { Chest, Player_Idle, Player_Walk, Heart }
+Texture_Kind :: enum { Chest, Player_Idle, Player_Walk, Heart, Green_Slime_Walk, Green_Slime_Idle }
 
 load_textures :: proc() {
 	w.tile_textures = {
@@ -18,6 +18,8 @@ load_textures :: proc() {
 		.Player_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png")),
 		.Player_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png")),
 		.Heart = k2.load_texture_from_bytes(#load("assets/mine/heart.png")),
+		.Green_Slime_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/SlimeGreen_Walk.png")),
+		.Green_Slime_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/SlimeGreen_Idle.png")),
 	}
 }
 unload_textures :: proc() {
@@ -91,10 +93,15 @@ load_current_room :: proc(m: tiled.Map) {
 				if append(&w.room.interactables, interactable) == 0 {
 					log.errorf("Failed to push to interactables: %v", interactable)
 				}
-				collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+2, TILE_WIDTH-4, TILE_HEIGHT-4}}
+				collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+6, TILE_WIDTH-4, TILE_HEIGHT-8}}
 				if append(&w.room.colliders, collider) == 0 {
-					log.errorf("Failed to push to collider: %v", collider)
+					log.errorf("Failed to push to colliders: %v", collider)
 				}
+			}
+		case "slime":
+			slime := slime_init_from_object(object)
+			if append(&w.room.enemies, slime) == 0 {
+				log.errorf("Failed to push to enemies: %v", slime)
 			}
 		}
 	}
@@ -109,11 +116,12 @@ load_current_room :: proc(m: tiled.Map) {
 
 	for layer in m.layers {
 		is_interactable := layer.name == "interactables"
+		is_enemy := layer.name == "enemies"
 		is_collider := layer.name == "colliders"
 
 		#partial switch layer.type {
 		case .Object_Group:
-			if is_interactable {
+			if is_interactable || is_enemy {
 				for object in layer.objects { load_interactable(object) }
 			}
 			if is_collider {

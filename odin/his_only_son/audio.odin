@@ -7,9 +7,9 @@ Audio :: struct {
 	streams: [1]k2.Audio_Stream,
 	current_stream_idx: int,
 	playing: bool,
-	
+
 	sounds: [Sound_Kind]k2.Sound,
-	
+
 	// Must play some time after init, otherwise music starts with significant delay.
 	first_time_inited: bool,
 }
@@ -22,7 +22,7 @@ audio_load :: proc() {
 	for stream in w.audio.streams {
 		k2.set_audio_stream_loop(stream, true)
 	}
-	
+
 	w.audio.sounds = {
 		.Chest_Open = k2.load_sound_from_bytes(#load("assets/sounds/sfx_wooden_object_open.wav")),
 	}

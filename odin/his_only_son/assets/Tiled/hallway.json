@@ -254,12 +254,36 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
+         "visible":false,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":5,
+         "name":"enemies",
+         "objects":[
+                {
+                 "gid":94,
+                 "height":16,
+                 "id":22,
+                 "name":"slime",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"green_slime",
+                 "visible":true,
+                 "width":16,
+                 "x":479.425221289803,
+                 "y":73.2902632486493
+                }],
+         "opacity":1,
+         "type":"objectgroup",
          "visible":true,
          "x":0,
          "y":0
         }],
- "nextlayerid":5,
- "nextobjectid":22,
+ "nextlayerid":6,
+ "nextobjectid":23,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -324,6 +348,19 @@
          "name":"Character_Idle",
          "spacing":0,
          "tilecount":15,
+         "tileheight":16,
+         "tilewidth":16
+        }, 
+        {
+         "columns":8,
+         "firstgid":94,
+         "image":"..\/TinyTerrors\/SlimeGreen_Walk.png",
+         "imageheight":48,
+         "imagewidth":128,
+         "margin":0,
+         "name":"SlimeGreen_Walk",
+         "spacing":0,
+         "tilecount":24,
          "tileheight":16,
          "tilewidth":16
         }],
