@@ -307,6 +307,7 @@ Enemy :: struct {
 	collision_rect_fun: proc(self: Enemy) -> Rect,
 	existed_time: f32, // how much time the instance exists
 	no_actions_time: f32, // how much time there were no actions taken
+	next_action_in: f32, // how much time should pass for no_actions_time for an action to happen
 
 	variant: union{Slime},
 }
@@ -325,7 +326,7 @@ slime_init_from_object :: proc(object: tiled.Object) -> Enemy {
 	return Enemy{pos={f32(object.x), f32(object.y)}, attack_power=1,
 		variant=Slime{kind=kind}, script_fun=green_slime_script_fun,
 		animation={speed=6, idle_frame_max=4, walk_frame_max=8}, collision_rect_fun=collision_rect_fun,
-		velocity={0,-5}}
+		velocity={0,-5}, next_action_in=5}
 }
 enemies_update :: proc(enemies: []Enemy, dt: f32) {
 	for &enemy in enemies {
