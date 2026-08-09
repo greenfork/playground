@@ -1,7 +1,26 @@
 package his_only_son
 
+import "core:math"
 import "core:math/rand"
 import "core:math/linalg"
+
+// Original: 9 lines
+// Sabina: 38 lines
+// Mine: 11 lines
+enemy_dir :: proc(to_move: Vec2) -> (dir: Direction) {
+	angle := math.atan2(to_move.x, to_move.y)
+	north_south_angle: f32 : 45 * math.RAD_PER_DEG
+	if math.abs(angle) < north_south_angle {
+		dir = .South
+	} else if math.abs(angle) > math.PI - north_south_angle {
+		dir = .North
+	} else if angle > 0 {
+		dir = .East
+	} else if angle < 0 {
+		dir = .West
+	}
+	return
+}
 
 player_in_range :: proc(player: Player, enemy: Enemy, range: f32) -> bool {
 	return linalg.length(player.pos - enemy.pos) < range
@@ -25,15 +44,7 @@ green_slime_script_fun :: proc(slime: ^Enemy, dt: f32) {
 		slime.is_moving = true
 	}
 
-	if to_move.x > 0 {
-		slime.dir = .East
-	} else if to_move.x < 0 {
-		slime.dir = .West
-	} else if to_move.y > 0 {
-		slime.dir = .South
-	} else if to_move.y < 0 {
-		slime.dir = .North
-	}
+	slime.dir = enemy_dir(to_move)
 
 	if slime.is_moving {
 		slime.animation.walk_time += dt
