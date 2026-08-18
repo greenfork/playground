@@ -4,9 +4,6 @@ import "core:math"
 import "core:math/rand"
 import "core:math/linalg"
 
-// Original: 9 lines
-// Sabina: 38 lines
-// Mine: 11 lines
 enemy_dir :: proc(to_move: Vec2) -> (dir: Direction) {
 	angle := math.atan2(to_move.x, to_move.y)
 	north_south_angle: f32 : 45 * math.RAD_PER_DEG
