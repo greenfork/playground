@@ -13,7 +13,7 @@ Audio :: struct {
 	// Must play some time after init, otherwise music starts with significant delay.
 	first_time_inited: bool,
 }
-Sound_Kind :: enum { Chest_Open }
+Sound_Kind :: enum { Chest_Open, Male_Pain }
 
 audio_load :: proc() {
 	w.audio.streams = {
@@ -25,6 +25,7 @@ audio_load :: proc() {
 
 	w.audio.sounds = {
 		.Chest_Open = k2.load_sound_from_bytes(#load("assets/sounds/sfx_wooden_object_open.wav")),
+		.Male_Pain = k2.load_sound_from_bytes(#load("assets/sounds/grunt_pain_male.wav")),
 	}
 	if debug_audio { log.debug("Audio files loaded") }
 }

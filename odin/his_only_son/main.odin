@@ -19,6 +19,7 @@ debug_collisions := false
 debug_interactions := false
 debug_with_mouse := true
 debug_audio := false
+debug_aggression := false
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -44,6 +45,7 @@ World :: struct {
 	player: Player,
 	room: Room,
 	drawing_queue: Drawing_Queue,
+	should_quit: bool,
 }
 w: World
 world_init :: proc(world: ^World) {
@@ -60,6 +62,8 @@ world_destroy :: proc(world: ^World) {
 
 Direction :: enum { East, West, North, South }
 
+PLAYER_INVULNERABILITY_TIME :: 3
+PLAYER_INVULNERABILITY_BLINKING_PERIOD :: 0.3
 Player :: struct {
 	pos: Vec2,
 	size: Vec2,
@@ -69,11 +73,44 @@ Player :: struct {
 	animation_dt_idle: f32,
 	animation_dt_walk: f32,
 	active_interactable: ^Interactable,
+	invulnerability_timer: f32,
 
 	gold: int,
 	health: int,
 }
+player_endure_enemy_aggression :: proc(player: ^Player, enemies: []Enemy) {
+	if player.invulnerability_timer > 0 do return
+
+	for enemy in enemies {
+		if k2.rect_overlapping(player_collision_rect(player^), enemy->collision_rect_fun()) {
+			player_take_damage(player, enemy.attack_power)
+			if debug_aggression do log.debugf("Player collided with enemy: %v", enemy)
+			break
+		}
+	}
+}
+player_take_damage :: proc(player: ^Player, damage: int) {
+	if player.invulnerability_timer > 0 do return
+	player.invulnerability_timer = PLAYER_INVULNERABILITY_TIME
+	player.health -= damage
+	sound_play(.Male_Pain)
+	if debug_aggression do log.debugf("Player took %v damage", damage)
+}
+player_count_invulnerability_time :: proc(player: ^Player, dt: f32) {
+	if player.invulnerability_timer > 0 {
+		player.invulnerability_timer = math.max(player.invulnerability_timer-dt, 0)
+	}
+}
 player_draw :: proc(player: Player) {
+	dont_draw := false
+	if player.invulnerability_timer > 0 {
+		if int(math.trunc(player.invulnerability_timer / PLAYER_INVULNERABILITY_BLINKING_PERIOD)) % 2 != 0 {
+			dont_draw = true
+		}
+	}
+
+	if dont_draw do return
+
 	player_pos := player.pos - {0,16}
 	if player.is_moving {
 		src_rect: Rect
@@ -499,9 +536,8 @@ step :: proc() -> bool {
 	context.logger = logger
 	free_all(context.temp_allocator)
 
-	if !k2.update() {
-		return false
-	}
+	if !k2.update() do return false
+	if w.should_quit do return false
 
 	dt := k2.get_frame_time()
 
@@ -523,6 +559,8 @@ step :: proc() -> bool {
 	process_input()
 	player_set_active_interactable(&w.player, w.room.interactables[:])
 	enemies_update(w.room.enemies[:], dt)
+	player_endure_enemy_aggression(&w.player, w.room.enemies[:])
+	player_count_invulnerability_time(&w.player, dt)
 
 	{
 		w.game_camera = {
