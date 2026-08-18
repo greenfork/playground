@@ -23,7 +23,7 @@ player_in_range :: proc(player: Player, enemy: Enemy, range: f32) -> bool {
 	return linalg.length(player.pos - enemy.pos) < range
 }
 
-green_slime_script_fun :: proc(slime: ^Enemy, dt: f32) {
+green_slime_script_fun :: proc(slime: ^Enemy, dt: f32, room: ^Room) {
 	defer {
 		slime.existed_time += dt
 		slime.no_actions_time += dt
@@ -51,7 +51,7 @@ green_slime_script_fun :: proc(slime: ^Enemy, dt: f32) {
 		slime.animation.idle_time += dt
 	}
 
-	fixed_position, collided := colliders_fix_position(w.room.colliders[:], slime.pos, to_move, slime->collision_rect_fun())
+	fixed_position, collided := colliders_fix_position(room.colliders[:], slime.pos, to_move, slime->collision_rect_fun())
 	slime.pos = fixed_position
 
 	choose_direction :: proc() -> Vec2 {

@@ -80,8 +80,8 @@ draw_map :: proc(m: tiled.Map) {
 	}
 }
 
-load_current_room :: proc(m: tiled.Map) {
-	load_interactable :: proc(object: tiled.Object) {
+load_current_room :: proc(m: tiled.Map) -> (room: Room) {
+	load_interactable :: proc(room: ^Room, object: tiled.Object) {
 		switch object.name {
 		case "hero":
 			w.player.pos = {f32(object.x), f32(object.y)}
@@ -90,26 +90,26 @@ load_current_room :: proc(m: tiled.Map) {
 			case "golden_crystals_chest":
 				interactable := Interactable{variant=Chest{gold_amount=10}, pos={f32(object.x), f32(object.y)},
 					animation_frame_max=2, animation_speed=10}
-				if append(&w.room.interactables, interactable) == 0 {
+				if append(&room.interactables, interactable) == 0 {
 					log.errorf("Failed to push to interactables: %v", interactable)
 				}
 				collider := Collider{rect=Rect{f32(object.x)+2, f32(object.y-TILE_HEIGHT)+6, TILE_WIDTH-4, TILE_HEIGHT-8}}
-				if append(&w.room.colliders, collider) == 0 {
+				if append(&room.colliders, collider) == 0 {
 					log.errorf("Failed to push to colliders: %v", collider)
 				}
 			}
 		case "slime":
 			slime := slime_init_from_object(object)
-			if append(&w.room.enemies, slime) == 0 {
+			if append(&room.enemies, slime) == 0 {
 				log.errorf("Failed to push to enemies: %v", slime)
 			}
 		}
 	}
 
-	load_collider :: proc(object: tiled.Object) {
+	load_collider :: proc(room: ^Room, object: tiled.Object) {
 		collider := Collider{rect=Rect{object.x, object.y,
 			object.width, object.height}}
-		if append(&w.room.colliders, collider) == 0 {
+		if append(&room.colliders, collider) == 0 {
 			log.errorf("Failed to push to colliders: %v", collider)
 		}
 	}
@@ -122,11 +122,12 @@ load_current_room :: proc(m: tiled.Map) {
 		#partial switch layer.type {
 		case .Object_Group:
 			if is_interactable || is_enemy {
-				for object in layer.objects { load_interactable(object) }
+				for object in layer.objects { load_interactable(&room, object) }
 			}
 			if is_collider {
-				for object in layer.objects { load_collider(object)}
+				for object in layer.objects { load_collider(&room, object)}
 			}
 		}
 	}
+	return
 }

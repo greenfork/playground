@@ -43,7 +43,7 @@ World :: struct {
 	game_camera_world_rect: Rect,
 	ui_camera: k2.Camera,
 	player: Player,
-	room: Room,
+	scenes: [dynamic; 5]Scene,
 	drawing_queue: Drawing_Queue,
 	should_quit: bool,
 }
@@ -186,6 +186,29 @@ player_set_active_interactable :: proc(player: ^Player, interactables: []Interac
 	} else {
 		player.active_interactable = nil
 	}
+}
+
+Scene :: union { Scene_Starting_Screen, Scene_Game_Over, Scene_Room }
+Scene_Room :: struct {
+	room: Room,
+}
+Scene_Starting_Screen :: struct {
+}
+Scene_Game_Over :: struct {
+	state: Scene_Game_Over_State,
+}
+Scene_Game_Over_State :: enum { Won, Lost }
+scene_transition :: proc(new_scene: Scene) {
+	w.scenes[len(w.scenes)-1] = new_scene
+}
+scene_stack :: proc(new_scene: Scene) {
+	append(&w.scenes, new_scene)
+}
+scene_game_over_stack :: proc(state: Scene_Game_Over_State) {
+	scene_stack(Scene_Game_Over{state=state})
+}
+scene_check_game_over :: proc() {
+	if w.player.health <= 0 do scene_game_over_stack(.Lost)
 }
 
 Room :: struct {
@@ -337,7 +360,7 @@ Enemy :: struct {
 	pos: Vec2,
 	velocity: Vec2,
 	attack_power: int,
-	script_fun: proc(self: ^Enemy, dt: f32),
+	script_fun: proc(self: ^Enemy, dt: f32, room: ^Room),
 	is_moving: bool,
 	animation: Enemy_Animation,
 	dir: Direction,
@@ -365,10 +388,10 @@ slime_init_from_object :: proc(object: tiled.Object) -> Enemy {
 		animation={speed=6, idle_frame_max=4, walk_frame_max=8}, collision_rect_fun=collision_rect_fun,
 		velocity={0,-5}, next_action_in=5}
 }
-enemies_update :: proc(enemies: []Enemy, dt: f32) {
+enemies_update :: proc(enemies: []Enemy, dt: f32, room: ^Room) {
 	for &enemy in enemies {
 		if enemy.script_fun != nil {
-			enemy->script_fun(dt)
+			enemy->script_fun(dt, room)
 		}
 	}
 }
@@ -425,7 +448,7 @@ draw_ui :: proc() {
 	}
 }
 
-process_input :: proc() {
+process_input_in_room :: proc(room: ^Room) {
 	movement: Vec2
 
 	if k2.key_is_held(.Up) {
@@ -457,7 +480,7 @@ process_input :: proc() {
 
 	dt := k2.get_frame_time()
 	to_move := movement * dt * w.player.speed
-	fixed_position, collided := colliders_fix_position(w.room.colliders[:], w.player.pos, to_move, player_collision_rect(w.player))
+	fixed_position, collided := colliders_fix_position(room.colliders[:], w.player.pos, to_move, player_collision_rect(w.player))
 	w.player.pos = fixed_position
 
 	if k2.key_went_down(.Space) {
@@ -482,7 +505,7 @@ process_input :: proc() {
 		if k2.point_in_rect(world_pos, player_rect(w.player)) {
 			log.debugf("Clicked on player: %v", w.player)
 		}
-		for i in w.room.interactables {
+		for i in room.interactables {
 			if k2.point_in_rect(world_pos, interactable_rect(i)) {
 				log.debugf("Clicked on interactable: %v", i)
 			}
@@ -490,7 +513,7 @@ process_input :: proc() {
 	}
 
 	if k2.key_went_down(.X) {
-		room_debug_report(w.room)
+		room_debug_report(room^)
 	}
 }
 
@@ -524,7 +547,8 @@ init :: proc() {
 	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed_Resizable})
 	load_textures()
 	load_maps()
-	load_current_room(w.maps[w.current_map_idx])
+	room := load_current_room(w.maps[w.current_map_idx])
+	append(&w.scenes, Scene_Room{room=room})
 	w.player.speed = 50
 	w.player.size = {16,16}
 	w.player.health = 3
@@ -532,20 +556,8 @@ init :: proc() {
 	audio_load()
 }
 
-step :: proc() -> bool {
-	context.logger = logger
-	free_all(context.temp_allocator)
-
-	if !k2.update() do return false
-	if w.should_quit do return false
-
-	dt := k2.get_frame_time()
-
-	if !w.audio.first_time_inited {
-//		audio_play()
-		w.audio.first_time_inited = true
-	}
-	audio_update()
+scene_room_step :: proc(scene: ^Scene_Room, dt: f32) {
+	room := &scene.room
 
 	if w.player.is_moving {
 		w.player.animation_dt_idle = 0
@@ -554,13 +566,15 @@ step :: proc() -> bool {
 		w.player.animation_dt_idle += k2.get_frame_time()
 		w.player.animation_dt_walk = 0
 	}
-	interactables_animate(w.room.interactables[:])
+	interactables_animate(room.interactables[:])
 
-	process_input()
-	player_set_active_interactable(&w.player, w.room.interactables[:])
-	enemies_update(w.room.enemies[:], dt)
-	player_endure_enemy_aggression(&w.player, w.room.enemies[:])
+	process_input_in_room(room)
+	player_set_active_interactable(&w.player, room.interactables[:])
+	enemies_update(room.enemies[:], dt, room)
+	player_endure_enemy_aggression(&w.player, room.enemies[:])
 	player_count_invulnerability_time(&w.player, dt)
+
+	scene_check_game_over()
 
 	{
 		w.game_camera = {
@@ -590,20 +604,59 @@ step :: proc() -> bool {
 
 	k2.clear(BG_COLOR)
 	draw_map(w.maps[w.current_map_idx])
-	interactables_draw(w.room.interactables[:])
-	enemies_draw(w.room.enemies[:])
+	interactables_draw(room.interactables[:])
+	enemies_draw(room.enemies[:])
 	player_draw(w.player)
 	drawing_queue_draw(&w.drawing_queue, w.game_camera)
 
-	colliders_draw_debug_info(w.room.colliders[:])
-	enemies_draw_debug_info(w.room.enemies[:])
+	colliders_draw_debug_info(room.colliders[:])
+	enemies_draw_debug_info(room.enemies[:])
 	player_draw_debug_info(w.player)
-	interactables_draw_debug_info(w.room.interactables[:], w.player)
+	interactables_draw_debug_info(room.interactables[:], w.player)
 
 	k2.set_camera(w.ui_camera)
 	draw_ui()
 	drawing_queue_draw_debug_info(w.drawing_queue)
 	k2.present()
+}
+
+scene_game_over_step :: proc(scene: ^Scene_Game_Over, dt: f32) {
+	room := w.scenes[len(w.scenes)-2].(Scene_Room).room
+
+	k2.clear(BG_COLOR)
+	k2.set_camera(w.game_camera)
+	draw_map(w.maps[w.current_map_idx])
+	interactables_draw(room.interactables[:])
+	enemies_draw(room.enemies[:])
+	player_draw(w.player)
+	drawing_queue_draw(&w.drawing_queue, w.game_camera)
+
+	k2.set_camera(w.ui_camera)
+	draw_ui()
+	k2.draw_text("YOU LOST", {10,10}, 10, k2.WHITE)
+	k2.present()
+}
+
+step :: proc() -> bool {
+	context.logger = logger
+	free_all(context.temp_allocator)
+
+	if !k2.update() do return false
+	if w.should_quit do return false
+
+	dt := k2.get_frame_time()
+
+	if !w.audio.first_time_inited {
+//		audio_play()
+		w.audio.first_time_inited = true
+	}
+	audio_update()
+
+	switch &sc in w.scenes[len(w.scenes)-1] {
+	case Scene_Room: scene_room_step(&sc, dt)
+	case Scene_Starting_Screen:
+	case Scene_Game_Over: scene_game_over_step(&sc, dt)
+	}
 
 	return true
 }
