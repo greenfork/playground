@@ -11,6 +11,8 @@ import "core:math"
 ZOOM :: 4
 SCREEN_WIDTH :: 240
 SCREEN_HEIGHT :: 180
+VW :: f32(SCREEN_WIDTH)/100
+VH :: f32(SCREEN_HEIGHT)/100
 
 debug_positions := false
 debug_animations := false
@@ -192,7 +194,9 @@ Scene :: union { Scene_Starting_Screen, Scene_Game_Over, Scene_Room }
 Scene_Room :: struct {
 	room: Room,
 }
-Scene_Starting_Screen :: struct {
+scene_room_load_first :: proc() -> Scene_Room {
+	room := load_current_room(w.maps[w.current_map_idx])
+	return {room=room}
 }
 Scene_Game_Over :: struct {
 	state: Scene_Game_Over_State,
@@ -547,8 +551,8 @@ init :: proc() {
 	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed_Resizable})
 	load_textures()
 	load_maps()
-	room := load_current_room(w.maps[w.current_map_idx])
-	append(&w.scenes, Scene_Room{room=room})
+	starting_screen := scene_starting_screen_init()
+	append(&w.scenes, starting_screen)
 	w.player.speed = 50
 	w.player.size = {16,16}
 	w.player.health = 3
@@ -654,7 +658,7 @@ step :: proc() -> bool {
 
 	switch &sc in w.scenes[len(w.scenes)-1] {
 	case Scene_Room: scene_room_step(&sc, dt)
-	case Scene_Starting_Screen:
+	case Scene_Starting_Screen: scene_starting_screen_step(&sc, dt)
 	case Scene_Game_Over: scene_game_over_step(&sc, dt)
 	}
 
