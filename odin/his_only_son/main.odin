@@ -553,6 +553,7 @@ init :: proc() {
 	load_maps()
 	starting_screen := scene_starting_screen_init()
 	append(&w.scenes, starting_screen)
+	scene_transition(scene_room_load_first())
 	w.player.speed = 50
 	w.player.size = {16,16}
 	w.player.health = 3
