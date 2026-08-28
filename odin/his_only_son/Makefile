@@ -1,6 +1,6 @@
 build:
 	mkdir -p bin
-	odin build . -out:bin/his_only_son -collection:myvendor=vendor/ -debug
+	odin build . -out:bin/his_only_son -collection:myvendor=vendor/ -debug -define:DYNAMIC_ASSETS=true
 
 build-release:
 	mkdir -p bin

@@ -7,26 +7,6 @@ import "core:log"
 TILE_WIDTH :: 16
 TILE_HEIGHT :: 16
 
-Texture_Kind :: enum { Chest, Player_Idle, Player_Walk, Heart, Green_Slime_Walk, Green_Slime_Idle }
-
-load_textures :: proc() {
-	w.tile_textures = {
-		k2.load_texture_from_bytes(#load("assets/TinyTerrors/Tileset.png")),
-	}
-	w.textures = {
-		.Chest = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Chests.png")),
-		.Player_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Idle.png")),
-		.Player_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/Character_Walk.png")),
-		.Heart = k2.load_texture_from_bytes(#load("assets/mine/heart.png")),
-		.Green_Slime_Walk = k2.load_texture_from_bytes(#load("assets/TinyTerrors/SlimeGreen_Walk.png")),
-		.Green_Slime_Idle = k2.load_texture_from_bytes(#load("assets/TinyTerrors/SlimeGreen_Idle.png")),
-	}
-}
-unload_textures :: proc() {
-	for tex in w.tile_textures { k2.destroy_texture(tex) }
-	for tex in w.textures { k2.destroy_texture(tex) }
-}
-
 load_maps :: proc() {
 	w.maps = {
 		tiled.parse_tilemap_from_bytes(#load("assets/Tiled/hallway.json"), allocator=w.arena_allocator),
@@ -52,8 +32,9 @@ draw_map :: proc(m: tiled.Map) {
 			w = f32(tileset.tile_width),
 			h = f32(tileset.tile_height),
 		}
-		dst_pos := Vec2{f32((column+skew_x) * TILE_WIDTH),f32((row+skew_y) * TILE_HEIGHT)}
-		return {&w.tile_textures[tileset_idx], src_rect, dst_pos}, true
+		dst_pos := Vec2{f32((column+skew_x) * TILE_WIDTH), f32((row+skew_y) * TILE_HEIGHT)}
+		tex := get_texture_ptr(&w.textures, Texture_Kind(tileset_idx))
+		return Drawing_Item{tex, src_rect, dst_pos}, true
 	}
 
 	for layer in m.layers {

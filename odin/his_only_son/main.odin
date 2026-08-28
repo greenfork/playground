@@ -22,6 +22,7 @@ debug_interactions := false
 debug_with_mouse := true
 debug_audio := false
 debug_aggression := false
+debug_controls := true
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -39,8 +40,7 @@ World :: struct {
 
 	maps: [1]tiled.Map,
 	current_map_idx: int,
-	tile_textures: [1]k2.Texture,
-	textures: [Texture_Kind]k2.Texture,
+	textures: Textures,
 	game_camera: k2.Camera,
 	game_camera_world_rect: Rect,
 	ui_camera: k2.Camera,
@@ -125,7 +125,8 @@ player_draw :: proc(player: Player) {
 		// +1 because first walk frame is the same as idle frame,
 		// hero moves but no animation starts playing
 		src_rect.x = f32(int(player.animation_dt_walk*player.speed/8 + 1) % 4) * TILE_WIDTH
-		drawing_queue_add({&w.textures[.Player_Walk], src_rect, player_pos})
+		tex := get_texture_ptr(&w.textures, .Player_Walk)
+		drawing_queue_add({tex, src_rect, player_pos})
 	} else {
 		src_rect: Rect
 		switch player.dir {
@@ -141,7 +142,8 @@ player_draw :: proc(player: Player) {
 			// animation always starts at the first frame.
 			src_rect.x = f32(int((player.animation_dt_idle - math.trunc(player.animation_dt_idle))*6) % 5) * TILE_WIDTH
 		}
-		drawing_queue_add({&w.textures[.Player_Idle], src_rect, player_pos})
+		tex := get_texture_ptr(&w.textures, .Player_Idle)
+		drawing_queue_add({tex, src_rect, player_pos})
 	}
 }
 player_rect :: proc(player: Player) -> Rect {
@@ -196,6 +198,7 @@ Scene_Room :: struct {
 }
 scene_room_load_first :: proc() -> Scene_Room {
 	room := load_current_room(w.maps[w.current_map_idx])
+	room.kind = .First
 	return {room=room}
 }
 Scene_Game_Over :: struct {
@@ -214,12 +217,17 @@ scene_game_over_stack :: proc(state: Scene_Game_Over_State) {
 scene_check_game_over :: proc() {
 	if w.player.health <= 0 do scene_game_over_stack(.Lost)
 }
+current_scene :: proc() -> Scene {
+	return w.scenes[len(w.scenes)-1]
+}
 
 Room :: struct {
+	kind: Room_Kind,
 	interactables: [dynamic; 32]Interactable,
 	colliders: [dynamic; 32]Collider,
 	enemies: [dynamic; 32]Enemy,
 }
+Room_Kind :: enum { First }
 room_debug_report :: proc(room: Room) {
 	for enemy in room.enemies {
 		log.debugf("Enemy: %v", enemy)
@@ -253,7 +261,8 @@ interactables_draw :: proc(interactables: []Interactable) {
 			case .Golden_Crystals: src_rect.y = TILE_HEIGHT
 			}
 			src_rect.x = TILE_WIDTH*f32(interactable.animation_frame)
-			drawing_queue_add({&w.textures[.Chest], src_rect, interactable.pos+skew})
+			tex := get_texture_ptr(&w.textures, .Chest)
+			drawing_queue_add({tex, src_rect, interactable.pos+skew})
 		}
 	}
 }
@@ -409,9 +418,9 @@ enemies_draw :: proc(enemies: []Enemy) {
 			switch var.kind {
 			case .Green:
 				if enemy.is_moving {
-					tex = &w.textures[.Green_Slime_Walk]
+					tex = get_texture_ptr(&w.textures, .Green_Slime_Walk)
 				} else {
-					tex = &w.textures[.Green_Slime_Idle]
+					tex = get_texture_ptr(&w.textures, .Green_Slime_Idle)
 				}
 			}
 		}
@@ -448,7 +457,8 @@ enemies_draw_debug_info :: proc(enemies: []Enemy) {
 draw_ui :: proc() {
 	k2.draw_text(fmt.tprintf("Gold: %d", w.player.gold), {5, 165}, 8, k2.YELLOW)
 	for heart_no in 1..<w.player.health+1 {
-		k2.draw_texture(w.textures[.Heart], {SCREEN_WIDTH-20*f32(heart_no),SCREEN_HEIGHT-20})
+		tex := get_texture(&w.textures, .Heart)
+		k2.draw_texture(tex, {SCREEN_WIDTH-20*f32(heart_no),SCREEN_HEIGHT-20})
 	}
 }
 
@@ -549,11 +559,12 @@ init :: proc() {
 	world_init(&w)
 
 	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed_Resizable})
-	load_textures()
 	load_maps()
 	starting_screen := scene_starting_screen_init()
 	append(&w.scenes, starting_screen)
-	scene_transition(scene_room_load_first())
+	first_room := scene_room_load_first()
+	scene_transition(first_room)
+	load_textures(first_room.room.kind)
 	w.player.speed = 50
 	w.player.size = {16,16}
 	w.player.health = 3
@@ -648,6 +659,13 @@ step :: proc() -> bool {
 
 	if !k2.update() do return false
 	if w.should_quit do return false
+
+	if debug_controls {
+		if k2.key_went_down(.F5){
+			reload_textures()
+			log.debugf("Textures reloaded")
+		}
+	}
 
 	dt := k2.get_frame_time()
 
