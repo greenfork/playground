@@ -23,6 +23,7 @@ debug_with_mouse := true
 debug_audio := false
 debug_aggression := false
 debug_controls := true
+enable_assets_watcher := true
 
 BG_COLOR :: k2.Color{0x0f,0x11,0x1d,0xff} // 0f111d
 
@@ -48,6 +49,8 @@ World :: struct {
 	scenes: [dynamic; 5]Scene,
 	drawing_queue: Drawing_Queue,
 	should_quit: bool,
+
+	assets_watcher: Assets_Watcher,
 }
 w: World
 world_init :: proc(world: ^World) {
@@ -570,6 +573,14 @@ init :: proc() {
 	w.player.health = 3
 	if debug_with_mouse { k2.set_cursor_visible(true) }
 	audio_load()
+	if enable_assets_watcher {
+		w.assets_watcher = assets_watcher_init("assets", context.allocator, proc(event: Assets_Watcher_Event) {
+			if !event.is_dir {
+				reload_textures()
+				log.debugf("Textures reloaded")
+			}
+		})
+	}
 }
 
 scene_room_step :: proc(scene: ^Scene_Room, dt: f32) {
@@ -666,6 +677,9 @@ step :: proc() -> bool {
 			log.debugf("Textures reloaded")
 		}
 	}
+	if enable_assets_watcher {
+		assets_watcher_drain_and_run_callback(&w.assets_watcher, context.temp_allocator)
+	}
 
 	dt := k2.get_frame_time()
 
@@ -691,5 +705,6 @@ shutdown :: proc() {
 	audio_destroy()
 	k2.shutdown()
 	log.destroy_console_logger(logger)
+	if enable_assets_watcher do assets_watcher_destroy(w.assets_watcher)
 	world_destroy(&w)
 }
