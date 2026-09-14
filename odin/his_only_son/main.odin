@@ -1,12 +1,13 @@
 package his_only_son
 
 import "core:log"
-import k2 "karl2d"
 import "myvendor:tiled"
 import "core:mem"
 import "core:fmt"
 import "core:math/linalg"
 import "core:math"
+import k2 "karl2d"
+import mu "vendor:microui"
 
 ZOOM :: 4
 SCREEN_WIDTH :: 240
@@ -51,6 +52,10 @@ World :: struct {
 	should_quit: bool,
 
 	assets_watcher: Assets_Watcher,
+
+	mu_ctx: mu.Context,
+	// mu_atlas_texture: k2.Render_Texture,
+	mu_atlas_texture: k2.Texture,
 }
 w: World
 world_init :: proc(world: ^World) {
@@ -457,7 +462,7 @@ enemies_draw_debug_info :: proc(enemies: []Enemy) {
 	}
 }
 
-draw_ui :: proc() {
+draw_game_ui :: proc() {
 	k2.draw_text(fmt.tprintf("Gold: %d", w.player.gold), {5, 165}, 8, k2.YELLOW)
 	for heart_no in 1..<w.player.health+1 {
 		tex := get_texture(&w.textures, .Heart)
@@ -560,6 +565,7 @@ init :: proc() {
 	logger = log.create_console_logger()
 	context.logger = logger
 	world_init(&w)
+	microui_init(&w.mu_ctx, &w.mu_atlas_texture)
 
 	k2.init(SCREEN_WIDTH*ZOOM, SCREEN_HEIGHT*ZOOM, "His only Son [windowed]", {window_mode=.Windowed_Resizable})
 	load_maps()
@@ -642,7 +648,8 @@ scene_room_step :: proc(scene: ^Scene_Room, dt: f32) {
 	interactables_draw_debug_info(room.interactables[:], w.player)
 
 	k2.set_camera(w.ui_camera)
-	draw_ui()
+	draw_game_ui()
+	microui_draw(&w.mu_ctx, w.mu_atlas_texture)
 	drawing_queue_draw_debug_info(w.drawing_queue)
 	k2.present()
 }
@@ -659,7 +666,8 @@ scene_game_over_step :: proc(scene: ^Scene_Game_Over, dt: f32) {
 	drawing_queue_draw(&w.drawing_queue, w.game_camera)
 
 	k2.set_camera(w.ui_camera)
-	draw_ui()
+	draw_game_ui()
+	microui_draw(&w.mu_ctx, w.mu_atlas_texture)
 	k2.draw_text("YOU LOST", {10,10}, 10, k2.WHITE)
 	k2.present()
 }
@@ -684,10 +692,12 @@ step :: proc() -> bool {
 	dt := k2.get_frame_time()
 
 	if !w.audio.first_time_inited {
-//		audio_play()
+		// audio_play()
 		w.audio.first_time_inited = true
 	}
 	audio_update()
+
+	microui_input(&w.mu_ctx)
 
 	switch &sc in w.scenes[len(w.scenes)-1] {
 	case Scene_Room: scene_room_step(&sc, dt)
@@ -706,5 +716,6 @@ shutdown :: proc() {
 	k2.shutdown()
 	log.destroy_console_logger(logger)
 	if enable_assets_watcher do assets_watcher_destroy(w.assets_watcher)
+	microui_destroy(&w.mu_ctx, w.mu_atlas_texture)
 	world_destroy(&w)
 }
