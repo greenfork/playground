@@ -43,13 +43,16 @@
 (defn- return-to-response-mw [nextmw]
   (fn [req]
     (try
-      (let [res (nextmw req)]
-        (case (type res)
-          :string {:status 200 :body res :headers +default-headers+}
-          :buffer {:status 200 :body res :headers +default-headers+}
-          :struct (struct/to-table (update res :headers |(merge +default-headers+ $)))
-          :table (update res :headers |(merge +default-headers+ $))
-          {:status 404 :body "Not found"}))
+      (let [app-fun-res (nextmw req)
+            res (case (type app-fun-res)
+                  :string @{:status 200 :body app-fun-res :headers +default-headers+}
+                  :buffer @{:status 200 :body app-fun-res :headers +default-headers+}
+                  :struct (update (struct/to-table app-fun-res) :headers |(merge +default-headers+ $))
+                  :table (update app-fun-res :headers |(merge +default-headers+ $))
+                  @{:status 404 :body "Not found"})]
+        (when (= (memcmp (req :method) "HEAD") 0)
+          (put res :body nil))
+        res)
 
       ([err fib]
         (debug/stacktrace fib err "ERROR ")
@@ -65,7 +68,13 @@
     (setdyn :peg-grammar peg-grammar)
     (setdyn :rtree/req req)
     (setdyn :rtree/matches @[])
-    (put req :rtree/remaining-segments (string/split "/" (string/slice (req :route) 1) 0))
+    (setdyn :rtree/match-depth 0)
+    (setdyn :rtree/tracing-enabled? false)
+    (def route (req :route))
+    (put req :rtree/remaining-segments
+         (if (and (= (length route) 1) (= (memcmp route "/") 0))
+           @[]
+           (string/split "/" (string/slice route 1) 0)))
     (app-fn-mw req)))
 
 (defn run-app [f &named middlewares host port]
@@ -74,23 +83,33 @@
 
 (defn- string-matches?
   ``Matches route segments "foo", "foo/bar" etc.``
-  [str remaining &named full]
+  [str remaining]
+  # Emptry string matches anything.
   (when (empty? str) (break true))
+  # Empty remaining route doesn't match anything.
   (when (empty? remaining) (break false))
-  (let [str (if (string/has-prefix? "/" str) (string/slice str 1) str)
-        str (if (string/has-suffix? "/" str) (string/slice str 0 -2) str)
-        route-to-match (if full (string/join remaining "/") (first remaining))
-        [matches? in-full?] (prefixes-match? str route-to-match)]
+
+  (when-let [str (if (string/has-prefix? "/" str) (string/slice str 1) str)
+             str (if (string/has-suffix? "/" str) (string/slice str 0 -2) str)
+             num-slashes (count |(= (chr "/") $) str)
+             _ (< num-slashes (length remaining))
+             route-to-match (if (zero? num-slashes)
+                              (first remaining)
+                              (string/join (array/slice remaining 0 (inc num-slashes)) "/"))
+             [matches? in-full?] (prefixes-match? str route-to-match)]
     (when (and matches? in-full?)
-      (def num-slashes (count |(= (chr "/") $) str))
       (array/remove remaining 0 (inc num-slashes)))))
 
 (var- matcher-matches? nil) # forward declaration
 
 (defn- array-matches?
   ``Matches route segments ["foo"], @["foo" "bar"] etc.``
-  [arr remaining &named full]
-  (when (empty? remaining) (break (empty? arr)))
+  [arr remaining]
+  # Emptry array matches anything.
+  (when (empty? arr) (break true))
+  # Empty remaining route doesn't match anything.
+  (when (empty? remaining) (break false))
+
   (let [remaining-copy (array/slice remaining)
         all-match? (all |(matcher-matches? $ remaining-copy) arr)]
     (if all-match?
@@ -99,9 +118,9 @@
         true)
       false)))
 
-(defn- keyword-match?
+(defn- keyword-matches?
   ``Matches a keyword: PEG pattern, special keywords :number or :string.``
-  [kw remaining &named full]
+  [kw remaining]
   (when-let [segment (first remaining)]
     (case kw
       :number (when (peg/match '(* :d+ -1) segment)
@@ -118,18 +137,20 @@
   matches sequentially each matcher within.
   When `full` is truthy, the string must mutch the entire remaining segments.
   When `full` is falsey, the match happens only on a substring.``
-  [matcher remaining &named full]
-  (case (type matcher)
-    :string (string-matches? matcher remaining :full full)
-    :buffer (string-matches? matcher remaining :full full)
-    :number (string-matches? (string matcher) remaining :full full)
-    :tuple (array-matches? matcher remaining :full full)
-    :array (array-matches? matcher remaining :full full)
-    :keyword (keyword-match? matcher remaining :full full)
-    (errorf "Cannot match with matcher %q" matcher)))
+  [matcher remaining &named full-match?]
+  (let [matches? (case (type matcher)
+                   :string (string-matches? matcher remaining)
+                   :buffer (string-matches? matcher remaining)
+                   :number (string-matches? (string matcher) remaining)
+                   :tuple (array-matches? matcher remaining)
+                   :array (array-matches? matcher remaining)
+                   :keyword (keyword-matches? matcher remaining)
+                   (errorf "Cannot match with matcher %q" matcher))
+        res (and matches? (or (not full-match?) (empty? remaining)))]
+    res))
 
 (defmacro match-route
-  ``Match a route segment``
+  ``Match a route segment.``
   [options matcher & body]
   (def keywords-count (count-keywords-in-matcher matcher))
   (unless (> (length body) keywords-count)
@@ -137,18 +158,38 @@
   (def bindings (tuple/brackets ;(slice body 0 keywords-count)))
   (def body (slice body keywords-count))
   (defn method-matches? []
-    (or (not (has-key? options :method))
-        (= (memcmp (options :method) ((dyn :rtree/req) :method)) 0)))
+    (let [req-method ((dyn :rtree/req) :method)
+          opt-method (options :method)]
+      (or
+        (not (has-key? options :method))
+        (= (memcmp opt-method req-method) 0)
+        # Treat HEAD as GET without response body.
+        (and (= (memcmp req-method "HEAD") 0) (= (memcmp opt-method "GET") 0)))))
+  (def tracing/qualifier-name (get options :qualifier-name "match-route"))
 
   (with-syms [$matches]
     ~(if-let [_ (,method-matches?)
               _ (,matcher-matches? ,matcher ((dyn :rtree/req) :rtree/remaining-segments)
-                                   :full (,options :full-match?))
+                                   :full-match? (,options :full-match?))
               ,$matches (dyn :rtree/matches)
-              _ (= (length ,$matches) ,keywords-count)
               ,bindings ,$matches]
-       (return :rtree/return (do ,;body))
-       (array/clear (dyn :rtree/matches)))))
+       (do
+         ,(when (dyn :rtree/tracing-enabled?)
+            ~(do
+               (eprintf "%s %s: %s%s %q matched"
+                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :route)
+                        (string/repeat " " (* 2 (dyn :rtree/match-depth)))
+                        ,tracing/qualifier-name ,matcher)
+               (setdyn :rtree/match-depth (inc (dyn :rtree/match-depth)))))
+         (return :rtree/return (do ,;body)))
+       (do
+         ,(when (dyn :rtree/tracing-enabled?)
+            ~(do
+               (eprintf "%s %s: %s%s %q did not match"
+                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :route)
+                        (string/repeat " " (* 2 (dyn :rtree/match-depth)))
+                        ,tracing/qualifier-name ,matcher)))
+         (array/clear (dyn :rtree/matches))))))
 
 (defmacro route
   ``Start routing by defining a return point when the route matches.``
@@ -158,19 +199,19 @@
 (defmacro is
   ``Full match``
   [matcher & body]
-  (apply match-route {:full-match? true} matcher body))
+  (apply match-route {:qualifier-name "is" :full-match? true} matcher body))
 (defmacro on
   ``Partial match``
   [matcher & body]
-  (apply match-route {} matcher body))
+  (apply match-route {:qualifier-name "on"} matcher body))
 (defmacro GET
   ``Match GET HTTP method.``
   [matcher & body]
-  (apply match-route {:method "GET"} matcher body))
+  (apply match-route {:qualifier-name "GET" :method "GET"} matcher body))
 (defmacro POST
   ``Match POST HTTP method.``
   [matcher & body]
-  (apply match-route {:method "POST"} matcher body))
+  (apply match-route {:qualifier-name "POST" :method "POST"} matcher body))
 
 (defn redirect
   ``Redirect to path with status. Default is current path and status 303.``
@@ -204,3 +245,9 @@
                @{})
         params (merge query form)]
     (keys-to-keywords params)))
+
+(defn enable-tracing
+  ``Enable tracing for each matcher function. Must be called at the top level
+  before the routing function begins.``
+  []
+  (setdyn :rtree/tracing-enabled? true))

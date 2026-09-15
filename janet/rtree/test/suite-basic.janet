@@ -10,6 +10,7 @@
   (r/route
     (r/is "/basic-full"
       "/basic-full path")
+
     (r/is "no-slash"
       "/no-slash path")
     (r/is "/double/slash"
@@ -39,10 +40,10 @@
       (string/format "The number is %d!" n))
     (r/is ["date" :number :number :number] year month day
       (string/format "The date is %04d-%02d-%02d!" year month day))
-    # (r/GET ""
-    #   (r/on "a"
-    #     (r/GET :string a
-    #       (string/format "Got %s" a))))
+    (r/on "multi"
+      (r/on :string level
+        (r/on "capture"
+          (string/format "/multi/%s/capture path" level))))
 
     (r/is "/get-or-post"
       "/get-or-post path")
@@ -81,11 +82,6 @@
                  @{"Content-Type" "x-www-form-urlencoded"}))
   (http/request "POST" (string "http://127.0.0.1:9816" path) :body body :headers headers))
 
-(let [{:status status} (GET "/unknown")]
-  (assert (= status 404)))
-(let [{:status status} (POST "/unknown")]
-  (assert (= status 404)))
-
 # Basic
 (let [{:status status :body body} (GET "/basic-full")]
   (assert (= status 200))
@@ -99,6 +95,10 @@
 (let [{:status status :body body} (GET "/double/array")]
   (assert (= status 200))
   (assert (= (memcmp body "/double/array path") 0)))
+(let [{:status status} (GET "/unknown")]
+  (assert (= status 404)))
+(let [{:status status} (POST "/unknown")]
+  (assert (= status 404)))
 
 # Partial match
 (let [{:status status :body body} (GET "/partial")]
@@ -131,9 +131,9 @@
 (let [{:status status :body body} (GET "/date/2026/8/2")]
   (assert (= status 200))
   (assert (= (memcmp body "The date is 2026-08-02!") 0)))
-# (let [{:status status :body body} (GET "/a/b")]
-#   (assert (= status 200))
-#   (assert (= (memcmp body "Got b") 0)))
+(let [{:status status :body body} (GET "/multi/level/capture")]
+  (assert (= status 200))
+  (assert (= (memcmp body "/multi/level/capture path") 0)))
 
 # GET and POST
 (let [{:status status :body body} (GET "/get-or-post")]
