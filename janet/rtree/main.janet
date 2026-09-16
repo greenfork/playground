@@ -1,4 +1,5 @@
 (import spork/http)
+# (import circlet)
 
 (defn- prefixes-match?
   ``Checks if prefixes of two arrays/tuples match.
@@ -56,7 +57,7 @@
 
       ([err fib]
         (debug/stacktrace fib err "ERROR ")
-        {:status 500 :body "Internal Server Error"}))))
+        @{:status 500 :body "Internal Server Error"}))))
 
 (def- +default-middlwares+ [return-to-response-mw])
 
@@ -70,16 +71,25 @@
     (setdyn :rtree/matches @[])
     (setdyn :rtree/match-depth 0)
     (setdyn :rtree/tracing-enabled? false)
-    (def route (req :route))
+    # :route for spork/http, :uri for circlet
+    (put req :rtree/route (or (req :route) (req :uri)))
+    (def route (req :rtree/route))
     (put req :rtree/remaining-segments
          (if (and (= (length route) 1) (= (memcmp route "/") 0))
            @[]
            (string/split "/" (string/slice route 1) 0)))
     (app-fn-mw req)))
 
-(defn run-app [f &named middlewares host port]
+(defn make-handler [app-fun &named middlewares]
   (default middlewares [])
-  (http/server (app f middlewares (dyn *peg-grammar*)) host port))
+  (app app-fun middlewares (dyn *peg-grammar*)))
+
+(defn run-app [f &named middlewares host port]
+  (default host "127.0.0.1")
+  (default port 8000)
+  (http/server (make-handler f :middlewares middlewares) host port)
+  # (circlet/server (app f middlewares (dyn *peg-grammar*)) port host)
+  )
 
 (defn- string-matches?
   ``Matches route segments "foo", "foo/bar" etc.``
@@ -177,7 +187,7 @@
          ,(when (dyn :rtree/tracing-enabled?)
             ~(do
                (eprintf "%s %s: %s%s %q matched"
-                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :route)
+                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :rtree/route)
                         (string/repeat " " (* 2 (dyn :rtree/match-depth)))
                         ,tracing/qualifier-name ,matcher)
                (setdyn :rtree/match-depth (inc (dyn :rtree/match-depth)))))
@@ -186,7 +196,7 @@
          ,(when (dyn :rtree/tracing-enabled?)
             ~(do
                (eprintf "%s %s: %s%s %q did not match"
-                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :route)
+                        ((dyn :rtree/req) :method) ((dyn :rtree/req) :rtree/route)
                         (string/repeat " " (* 2 (dyn :rtree/match-depth)))
                         ,tracing/qualifier-name ,matcher)))
          (array/clear (dyn :rtree/matches))))))
@@ -216,7 +226,7 @@
 (defn redirect
   ``Redirect to path with status. Default is current path and status 303.``
   [&opt path status]
-  (default path ((dyn :rtree/req) :route))
+  (default path ((dyn :rtree/req) :rtree/route))
   (default status 303)
   @{:status status
     :body (string "You are being redirected to " path)
